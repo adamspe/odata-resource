@@ -89,7 +89,7 @@ var authors = new Resource({
     });
 ```
 
-Default functionality can be over-ridden.  For example perhaps you have some midleware that annotates the incoming request with the authenticated user (`req.user`) and you want:
+Default functionality can be over-ridden.  For example perhaps you have some middleware that annotates the incoming request with the authenticated user (`req.user`) and you want:
 
 - To expose a static relationship named `me` that simply returns the currently logged in user.
 - To prevent non-administrative users from seeing the existence of other users via list.
@@ -97,13 +97,14 @@ Default functionality can be over-ridden.  For example perhaps you have some mid
 
 ```
 var users = new Resource({
-            rel: '/apiusers',
-            model: models.User,
+            rel: '/api/users',
+            model: User,
             $select: '-secret', // under normal operation don't expose 'secret'
         });
     users.staticLink('me',function(req,res) {
         users.singleResponse(req,res,req.user,function(u){
-            u.secret = undefined; // using annotated object so need to drop secret explicitly
+            // using annotated object so need to drop secret explicitly
+            u.secret = undefined;
             return u;
         });
     });
@@ -127,7 +128,7 @@ var users = new Resource({
 
 # Testing
 
-Simply requires that `mongod` be running on the default port.
+Requires that `mongod` be running on the default port.
 
 ```
 % npm test
