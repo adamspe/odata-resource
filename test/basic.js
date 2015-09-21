@@ -2,7 +2,8 @@ var should = require('should'),
     mongoose = require('mongoose'),
     config = require('./api/config'),
     models = require('./api/models'),
-    api = require('supertest')('http://localhost:'+config.http);
+    app = require('./api/app'),
+    api = require('supertest')(app);
 
 function cleanDb(done) {
     for(var i in mongoose.connection.collections){
