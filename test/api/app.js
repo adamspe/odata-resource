@@ -12,11 +12,11 @@ var authors = new Resource({
         model: models.Author,
     }).instanceLink('books',function(req,res){
         var query = books.initQuery(books.getModel().find({_author: req._resourceId}),req);
-        query.exec(function(err,books){
+        query.exec(function(err,bks){
             if(err){
                 return Resource.sendError(res,500,'error finding books',err);
             }
-            res.send(books);
+            books.listResponse(req,res,bks);
         });
     }),
     reviews = new Resource({

@@ -24,6 +24,7 @@ var debug = require('debug')('Resource'),
  *                     If a value is supplied then $select on the query string will be ignored to protect against the
  *                     situation where the intent is to hide internal attributes (e.g. '-secret').  Unlike odata the
  *                     syntax here is passed through to mongo so the '-' prefix will be honored.
+ * - populate(string||Array): Specifies a property, or list of properties, to populate into objects.
  *
  * @constructor
  * @param {Object} definition The resource definition.

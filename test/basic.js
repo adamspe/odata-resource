@@ -165,7 +165,12 @@ describe('Basic Read',function(){
                     if(err) {
                         return done(err);
                     }
-
+                    res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(2);
+                    testBook(res.body.list[0],theBooks[1]);
+                    testBook(res.body.list[1],theBooks[0]);
+                    res.body.should.have.property('_links').and.be.instanceof(Object);
+                    var links = res.body._links;
+                    links.should.have.property('genres','/api/books/genres');
                     return done();
                 });
         });
