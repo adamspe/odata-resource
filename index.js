@@ -5,26 +5,31 @@ var debug = require('debug')('Resource'),
     _ = require('lodash');
 
 /**
- * Constructs a resource.
+ * <p>Constructs a resource.</p>
  *
- * Keys
- * - model (object): The instane of the Mongoose model (required).
- * - rel (string): The absolute path of the new resource (required).
- * - lean (boolean): Whether find[ById] queries should be 'lean' and return pojos (default true).  If false then
- *         resource instances, prior to mapping an object for return, could make use of methods on the instance model.
+ * <p>Keys</p>
  *
- * The following keys set defaults for possible query arguments.
- * - $top (number): The default value for $top if not supplied on the query string (default none).
- * - $skip (number): The default value for $skip if not supplied on the query string (default none).
- * - $orderby (string): The default value for $orderby if not supplied on the query string (default none).  This value
- *                      must use odata syntax like "foo asc,bar desc,baz" rather than mongo syntax like "foo -bar baz".
- * - $orderbyPaged (string): The name of an attribute to sort results by when clients are paging, send $top, but have not
- *                           explicitly sent $orderby. (default '_id').
- * - $select (string): The default value for $select if not supplied on the query string (default none, all properties).
+ * <ul>
+ * <li>model (object): The instane of the Mongoose model (required).</li>
+ * <li>rel (string): The absolute path of the new resource (required).</li>
+ * <li>lean (boolean): Whether find[ById] queries should be 'lean' and return pojos (default true).  If false then
+ *         resource instances, prior to mapping an object for return, could make use of methods on the instance model.</li>
+ * <li>populate(string||Array): Specifies a property, or list of properties, to populate into objects.</li>
+ * </ul>
+ *
+ * <p>The following keys set defaults for possible query arguments.</p>
+ * <ul>
+ * <li>$top (number): The default value for $top if not supplied on the query string (default none).</li>
+ * <li>$skip (number): The default value for $skip if not supplied on the query string (default none).</li>
+ * <li>$orderby (string): The default value for $orderby if not supplied on the query string (default none).  This value
+ *                      must use odata syntax like "foo asc,bar desc,baz" rather than mongo syntax like "foo -bar baz".</li>
+ * <li>$orderbyPaged (string): The name of an attribute to sort results by when clients are paging, send $top, but have not
+ *                           explicitly sent $orderby. (default '_id').</li>
+ * <li>$select (string): The default value for $select if not supplied on the query string (default none, all properties).
  *                     If a value is supplied then $select on the query string will be ignored to protect against the
  *                     situation where the intent is to hide internal attributes (e.g. '-secret').  Unlike odata the
- *                     syntax here is passed through to mongo so the '-' prefix will be honored.
- * - populate(string||Array): Specifies a property, or list of properties, to populate into objects.
+ *                     syntax here is passed through to mongo so the '-' prefix will be honored.</li>
+ * </ul>
  *
  * @constructor
  * @param {Object} definition The resource definition.
@@ -34,13 +39,13 @@ var Resource = function(definition) {
 };
 /**
  * Send a response error.
- * TODO - currently this function unconditionally sends the error with the response.
+ * @todo currently this function unconditionally sends the error with the response.
  * this may not be desirable since often exposing an error (e.g. stack trace) poses
  * a potential security vulnerability.
  *
  * @param  {Object} res     The express response object.
- * @param  {number} rc      The response status code (default 500).
- * @param  {string} message The response message.
+ * @param  {Number} rc      The response status code (default 500).
+ * @param  {String} message The response message.
  * @param  {Object} err     The error object.
  */
 Resource.sendError = function(res,rc,message,err) {
@@ -58,7 +63,7 @@ Resource.prototype.getDefinition = function() {
     return this._definition;
 };
 /**
- * @return {string} The resource relative path.
+ * @return {String} The resource relative path.
  */
 Resource.prototype.getRel = function() {
     return this._definition.rel;
@@ -222,10 +227,13 @@ Resource.prototype.initQuery = function(query,req) {
     return query;
 };
 /**
- * Builds a 'mapper' object that can be used to translate mongoose objects into
+ * <p>Builds a 'mapper' object that can be used to translate mongoose objects into
  * REST response objects.  This function can be passed to Array.map given an array of
  * mongoose objects.  All object results returned to a client should pass through a
- * mapper so that meta information like instance links can be attached.
+ * mapper so that meta information like instance links can be attached.</p>
+ *
+ * <p><em>Note:</em> When sending custom responses you should use the [listResponse]{@link Resource#listResponse} or [singleResponse]{@link Resource#singleResponse} functions to do
+ * so and those functions implicitly use a mapper.</p>
  *
  * @param  {function} postMapper Array.map callback that should be called after the underlying mapper does its work (optional).
  * @return {function}            An Array.map callback.
@@ -295,7 +303,7 @@ Resource.prototype.find = function(req,res) {
 /**
  * Add a static link implementation to this resource.
  *
- * @param  {string} rel  The relative path of the link.
+ * @param  {String} rel  The relative path of the link.
  * @param  {function} link A function to call when the static link is requested.  The
  *                         arguments are (req,res) which are the express request and response
  *                         objects respectively.
@@ -325,8 +333,8 @@ Resource.prototype.staticLink = function(rel,link) {
  * - otherSide (Object): The Resource instance of the other side entity.
  * - key (string): The attribute name on the otherside object containing the id of this Resource's entity type.
  *
- * @param  {string} rel  The relative path of the link.
- * @param  {Object||function} link The link definition.
+ * @param  {String} rel  The relative path of the link.
+ * @param  {Object|function} link The link definition.
  * @return {Object}      this
  */
 Resource.prototype.instanceLink = function(rel,link) {
