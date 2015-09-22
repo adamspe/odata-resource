@@ -65,8 +65,11 @@ var util = {
         review.should.have.property('_book',expect._book);
         review.should.have.property('_links').and.be.instanceof(Object);
         review._links.should.have.property('self','/api/reviews/'+expect._id);
+    },
+    testError: function(err,expect) {
+        err.should.have.property('status',expect.status);
+        err.should.have.property('message',expect.message);
     }
-
 };
 
 module.exports = util;

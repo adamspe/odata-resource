@@ -28,6 +28,7 @@
     "lodash": "^3.10.1"
   },
   "devDependencies": {
+    "body-parser": "^1.14.0",
     "chai": "^3.3.0",
     "mongoose": "^4.1.8",
     "should": "^7.1.0",

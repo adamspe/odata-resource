@@ -379,6 +379,23 @@ Resource.prototype.initRouter = function(app) {
         req._resourceId = id;
         next();
     });
+    router.post('/',(function(self){
+        return function(req,res) {
+            var Model = self.getModel(),
+                instance = new Model(req.body);
+            instance.save(function(err,saved){
+                if(err) {
+                    return Resource.sendError(res,500,'create failure',err);
+                }
+                // self.singleResponse(req,res,saved);
+                // re-fetch the object so that nested attributes are properly
+                // populated.
+                req._resourceId = saved._id;
+                self.findById(req,res);
+            });
+
+        };
+    })(this));
     router.get('/:id',(function(self){
         return function(req,res) {
             self.findById(req,res);
