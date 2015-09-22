@@ -1,5 +1,6 @@
 var should = require('should'),
     util = require('./util/util'),
+    _ = require('lodash'),
     models = util.models,
     api = util.api;
 
@@ -89,6 +90,103 @@ describe('CRUD',function(){
         });
     });
 
+    describe('Update',function(){
+        it('simple sparse (PATCH)',function(done){
+            var author = {
+                firstname: 'Manfred',
+                lastname: 'Mystery'
+            };
+            api.post('/api/authors')
+               .send(author)
+               .expect(200)
+               .expect('Content-Type', /json/)
+               .end(function(err,res){
+                    if(err) {
+                        return done(err);
+                    }
+                    author._id = res.body._id;
+                    util.testAuthor(res.body,author);
+                    api.put(res.body._links.self)
+                       .send({lastname: 'Smith'})
+                       .expect(200)
+                       .expect('Content-Type', /json/)
+                       .end(function(err,res){
+                          if(err) {
+                            return done(err);
+                          }
+                          author.lastname = 'Smith';
+                          util.testAuthor(res.body,author);
+                          done();
+                       })
+                });
+        });
+        it('simple complete',function(done){
+            var author = {
+                firstname: 'Harold',
+                lastname: 'Horror'
+            };
+            api.post('/api/authors')
+               .send(author)
+               .expect(200)
+               .expect('Content-Type', /json/)
+               .end(function(err,res){
+                    if(err) {
+                        return done(err);
+                    }
+                    author._id = res.body._id;
+                    util.testAuthor(res.body,author);
+                    api.put(res.body._links.self)
+                       .send(_.extend({},res.body,{lastname: 'Jones'}))
+                       .expect(200)
+                       .expect('Content-Type', /json/)
+                       .end(function(err,res){
+                          if(err) {
+                            return done(err);
+                          }
+                          author.lastname = 'Jones';
+                          util.testAuthor(res.body,author);
+                          done();
+                       })
+                });
+        });
+        it('invalid',function(done){
+            var author = {
+                firstname: 'Sigfried',
+                lastname: 'Suspense'
+            };
+            api.post('/api/authors')
+               .send(author)
+               .expect(200)
+               .expect('Content-Type', /json/)
+               .end(function(err,res){
+                    if(err) {
+                        return done(err);
+                    }
+                    author._id = res.body._id;
+                    util.testAuthor(res.body,author);
+                    api.put(res.body._links.self)
+                       .send({lastname: null}) // last name is required we can't remove it
+                       .expect(500)
+                       .expect('Content-Type', /json/)
+                       .end(function(err,res){
+                          if(err) {
+                            return done(err);
+                          }
+                          util.testError(res.body,{status:500,message:'update failure'});
+                          done();
+                       })
+                });
+        });
+        it('not found',function(done){
+          api.put('/api/authors/foo')
+             .send({firstname: 'Foo'})
+             .expect(404)
+             .end(function(err,res){
+                done(err);
+             });
+        });
+    });
+
     describe('Delete',function(){
         it('simple',function(done){
             var author = {
@@ -113,7 +211,7 @@ describe('CRUD',function(){
                             }
                             done();
                        });
-                })
+                });
         });
         it('not found',function(done){
           api.delete('/api/authors/foo')

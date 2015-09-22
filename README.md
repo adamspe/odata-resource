@@ -12,6 +12,18 @@ Node.Js module intended to allow for creation of REST resources served up via [E
 
 I found a few other modules that use the same basic components but invariably they wouldn't create the kinds of resources I wanted to be working with so I decided to write my own.
 
+# Requirements
+
+If exposing resources that support create (POST) and update (PUT) then your Express app must be able to parse JSON as input and you should use [body-parser](https://github.com/expressjs/body-parser) to get that done.
+
+```
+var app = require('express')();
+
+app.use(require('body-parser').json());
+```
+
+# Examples
+
 The most basic resource might look something like:
 
 ```

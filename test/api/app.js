@@ -1,10 +1,10 @@
 var express = require('express'),
-    bodyParser = require('body-parser'),
     Resource = require('../../index.js'),
     models = require('./models'),
     app = express();
 
-app.use(bodyParser.json());
+app.use(require('body-parser').json());
+
 
 app.get('/', function (req, res) {
   res.send('odata-resource test server');

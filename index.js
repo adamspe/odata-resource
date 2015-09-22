@@ -323,10 +323,40 @@ Resource.prototype.create = function(req,res) {
             return Resource.sendError(res,500,'create failure',err);
         }
         // self.singleResponse(req,res,saved);
-        // re-fetch the object so that nested attributes are properly
-        // populated.
+        // re-fetch the object so that nested attributes are properly populated.
         req._resourceId = saved._id;
         self.findById(req,res);
+    });
+};
+/**
+ * <p>Updates an instance of this entity type and returns the updated
+ * object to the client.</p>
+ *
+ * <p><em>Note:</em> This implementation of update is more similar to PATCH in that
+ * it doesn't require a complete object to update.  It will accept a sparsely populated
+ * input object and update only the keys found within that object.</p>
+ *
+ * @param  {Object} req The express request object.
+ * @param  {Object} res The express response object.
+ */
+Resource.prototype.update = function(req,res) {
+    var self = this,
+        model = self.getModel();
+    // not using findOneAndUpdate because helpers are not applied
+    model.findOne({_id: req._resourceId},function(err,obj){
+        if(err) {
+            return Resource.sendError(res,404,'not found',err);
+        }
+        Object.keys(req.body).forEach(function(key){
+            obj[key] = req.body[key];
+        });
+        obj.save(function(err,obj) {
+            if(err) {
+                return Resource.sendError(res,500,'update failure',err);
+            }
+            // re-fetch the object so that nested attributes are properly populated.
+            self.findById(req,res);
+        });
     });
 };
 /**
@@ -337,7 +367,6 @@ Resource.prototype.create = function(req,res) {
  */
 Resource.prototype.delete = function(req,res) {
     var self = this,
-        def = this.getDefinition();
         model = self.getModel();
     model.remove({_id: req._resourceId},function(err,rs) {
         if(err || rs.result.n === 0) {
