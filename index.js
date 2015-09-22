@@ -138,7 +138,11 @@ Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
         if(prevArgs.$skip >= 0) {
             response._links.prev = baseUrl+'?'+querystring.stringify(prevArgs);
         }
-        response._links.next = baseUrl+'?'+querystring.stringify(nextArgs);
+        // only add the next link if there are exactly the requested number of objects.
+        // can't be sure if the next page might not be empty.
+        if(response.list.length === parseInt(qDef.$top)){
+            response._links.next = baseUrl+'?'+querystring.stringify(nextArgs);
+        }
     }
     res.send(response);
     if(typeof(next) === 'function') {
