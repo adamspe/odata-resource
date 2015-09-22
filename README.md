@@ -1,6 +1,6 @@
 # odata-resource
 
-**Under Development, incomplete (no $filter only GET so far) and in-flux**
+**Under Development, incomplete (subset of $filter functionality) and in-flux**
 
 Node.Js module intended to allow for creation of REST resources served up via [ExpressJS](expressjs.com) and persisting data via [Mongoose](mongoosejs.com) that:
 
