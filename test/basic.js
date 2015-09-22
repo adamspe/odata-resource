@@ -1,16 +1,8 @@
 var should = require('should'),
-    mongoose = require('mongoose'),
-    config = require('./api/config'),
-    models = require('./api/models'),
-    app = require('./api/app'),
-    api = require('supertest')(app);
+    util = require('./util/util'),
+    models = util.models,
+    api = util.api;
 
-function cleanDb(done) {
-    for(var i in mongoose.connection.collections){
-        mongoose.connection.collections[i].remove(function(){});
-    }
-    return done();
-}
 
 describe('Basic Read',function(){
     var theAuthor = {
@@ -31,86 +23,42 @@ describe('Basic Read',function(){
             content: 'Hated it!',
             stars: 1
         }];
-
     before(function(done){
-        mongoose.connect(config.mongodb,function(err){
-            if(err) {
-                throw err;
-            }
-            return cleanDb(function(){
-                models.Author.create(theAuthor,function(err,author){
-                    should.not.exist(err);
-                    theAuthor._id = author._id.toString();
-                    theBooks.forEach(function(book){
-                        book._author = theAuthor._id;
+        util.before(function(){
+            models.Author.create(theAuthor,function(err,author){
+                if(err) {
+                    throw err;
+                }
+                theAuthor._id = author._id.toString();
+                theBooks.forEach(function(book){
+                    book._author = theAuthor._id;
+                });
+                models.Book.create(theBooks,function(err,books){
+                    if(err) {
+                        throw err;
+                    }
+                    books.forEach(function(b,i) {
+                        theBooks[i]._id = b._id.toString();
                     });
-                    models.Book.create(theBooks,function(err,books){
+                    theReviews.forEach(function(r){
+                        r._book = theBooks[0]._id;
+                    });
+                    models.Review.create(theReviews,function(err,reviews){
                         if(err) {
                             throw err;
                         }
-                        books.forEach(function(b,i) {
-                            theBooks[i]._id = b._id.toString();
+                        reviews.forEach(function(r,i){
+                            theReviews[i]._id = r._id.toString();
                         });
-                        theReviews.forEach(function(r){
-                            r._book = theBooks[0]._id;
-                        });
-                        models.Review.create(theReviews,function(err,reviews){
-                            if(err) {
-                                throw err;
-                            }
-                            reviews.forEach(function(r,i){
-                                theReviews[i]._id = r._id.toString();
-                            });
-                            done();
-                        });
+                        done();
                     });
                 });
             });
         });
     });
 
-    after(function(done){
-        cleanDb(function(){
-            mongoose.disconnect();
-            return done();
-        });
-    });
 
-    function testAuthor(author) {
-        author.should.have.property('firstname',theAuthor.firstname);
-        author.should.have.property('lastname',theAuthor.lastname);
-        author.should.have.property('_id',theAuthor._id);
-        author.should.have.property('_links').and.be.instanceof(Object);
-        var links = author._links;
-        links.should.have.property('self','/api/authors/'+theAuthor._id);
-        links.should.have.property('books','/api/authors/'+theAuthor._id+'/books');
-    }
-
-    function testBook(book,expect) {
-        book.should.have.property('title',expect.title);
-        book.should.have.property('genre',expect.genre);
-        book.should.have.property('_id',expect._id);
-        book.should.have.property('_links').and.be.instanceof(Object);
-        var links = book._links;
-        links.should.have.property('self','/api/books/'+expect._id);
-        links.should.have.property('reviews','/api/books/'+expect._id+'/reviews');
-        book.should.have.property('_author').and.be.instanceof(Object);
-        // TODO add links to populated attributes?
-        //testAuthor(book._author);
-        var author = book._author;
-        author.should.have.property('firstname',theAuthor.firstname);
-        author.should.have.property('lastname',theAuthor.lastname);
-        author.should.have.property('_id',theAuthor._id);
-    }
-
-    function testReview(review,expect) {
-        review.should.have.property('content',expect.content);
-        review.should.have.property('stars',expect.stars);
-        review.should.have.property('_id',expect._id);
-        review.should.have.property('_book',expect._book);
-        review.should.have.property('_links').and.be.instanceof(Object);
-        review._links.should.have.property('self','/api/reviews/'+expect._id);
-    }
+    after(util.after);
 
     describe('author',function(){
         // simple query, no filter
@@ -123,7 +71,7 @@ describe('Basic Read',function(){
                         return done(err);
                     }
                     res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(1);
-                    testAuthor(res.body.list[0]);
+                    util.testAuthor(res.body.list[0],theAuthor);
                     return done();
                });
         });
@@ -138,7 +86,7 @@ describe('Basic Read',function(){
                         return done(err);
                     }
                     res.body.should.be.instanceof(Object);
-                    testAuthor(res.body);
+                    util.testAuthor(res.body,theAuthor);
                     return done();
                });
         });
@@ -166,8 +114,8 @@ describe('Basic Read',function(){
                         return done(err);
                     }
                     res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(2);
-                    testBook(res.body.list[0],theBooks[1]);
-                    testBook(res.body.list[1],theBooks[0]);
+                    util.testBook(res.body.list[0],theBooks[1],theAuthor);
+                    util.testBook(res.body.list[1],theBooks[0],theAuthor);
                     res.body.should.have.property('_links').and.be.instanceof(Object);
                     var links = res.body._links;
                     links.should.have.property('genres','/api/books/genres');
@@ -186,9 +134,9 @@ describe('Basic Read',function(){
                 res.body.list.forEach(function(b,i) {
                     if(asc) {
                         // the default $orderby is title so the books should be in opposite order than they were created
-                        testBook(b,i === 0 ? theBooks[1] : theBooks[0]);
+                        util.testBook(b,i === 0 ? theBooks[1] : theBooks[0],theAuthor);
                     } else {
-                        testBook(b,theBooks[i]);
+                        util.testBook(b,theBooks[i],theAuthor);
                     }
                 });
 
@@ -242,7 +190,7 @@ describe('Basic Read',function(){
                             return done(err);
                         }
                         res.body.should.be.instanceof(Object);
-                        testBook(res.body,theBooks[i]);
+                        util.testBook(res.body,theBooks[i],theAuthor);
                         return done();
                    });
             };
@@ -260,9 +208,9 @@ describe('Basic Read',function(){
                 res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(2);
                 res.body.list.forEach(function(r,i) {
                     if(asc) {
-                        testReview(r,theReviews[i === 0 ? 1 : 0]);
+                        util.testReview(r,theReviews[i === 0 ? 1 : 0]);
                     } else {
-                        testReview(r,theReviews[i]);
+                        util.testReview(r,theReviews[i]);
                     }
                 });
                 return done();

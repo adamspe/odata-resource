@@ -131,5 +131,7 @@ var users = new Resource({
 Requires that `mongod` be running on the default port.
 
 ```
+% npm install -g mocha
+...
 % npm test
 ```
