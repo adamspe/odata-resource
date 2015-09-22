@@ -89,5 +89,38 @@ describe('CRUD',function(){
         });
     });
 
-
+    describe('Delete',function(){
+        it('simple',function(done){
+            var author = {
+                firstname: 'Manfred',
+                lastname: 'Mystery'
+            };
+            api.post('/api/authors')
+               .send(author)
+               .expect(200)
+               .expect('Content-Type', /json/)
+               .end(function(err,res){
+                    if(err) {
+                        return done(err);
+                    }
+                    author._id = res.body._id;
+                    util.testAuthor(res.body,author);
+                    api.delete(res.body._links.self)
+                       .expect(200)
+                       .end(function(err,res){
+                            if(err) {
+                                return done(err);
+                            }
+                            done();
+                       });
+                })
+        });
+        it('not found',function(done){
+          api.delete('/api/authors/foo')
+             .expect(404)
+             .end(function(err,res){
+                done(err);
+             });
+        });
+    });
 });

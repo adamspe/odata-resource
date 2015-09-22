@@ -12,9 +12,12 @@ var debug = require('debug')('Resource'),
  * <ul>
  * <li>model (object): The instane of the Mongoose model (required).</li>
  * <li>rel (string): The absolute path of the new resource (required).</li>
+ * <li>create (boolean): Specifies if the resource should support create (POST) (default true).</li>
+ * <li>update (boolean): Specifies if the resource should support update (PUT) (default true).</li>
+ * <li>delete (boolean): Specifies if the resource should support delete (DELETE) (default true).</li>
  * <li>lean (boolean): Whether find[ById] queries should be 'lean' and return pojos (default true).  If false then
  *         resource instances, prior to mapping an object for return, could make use of methods on the instance model.</li>
- * <li>populate(string||Array): Specifies a property, or list of properties, to populate into objects.</li>
+ * <li>populate (string||Array): Specifies a property, or list of properties, to populate into objects.</li>
  * </ul>
  *
  * <p>The following keys set defaults for possible query arguments.</p>
@@ -305,6 +308,50 @@ Resource.prototype.find = function(req,res) {
     });
 };
 /**
+ * Creates an instance of this entity type and returns the newly created
+ * object to the client.
+ *
+ * @param  {Object} req The express request object.
+ * @param  {Object} res The express response object.
+ */
+Resource.prototype.create = function(req,res) {
+    var self = this,
+        Model = self.getModel(),
+        instance = new Model(req.body);
+    instance.save(function(err,saved){
+        if(err) {
+            return Resource.sendError(res,500,'create failure',err);
+        }
+        // self.singleResponse(req,res,saved);
+        // re-fetch the object so that nested attributes are properly
+        // populated.
+        req._resourceId = saved._id;
+        self.findById(req,res);
+    });
+};
+/**
+ * Deletes an instance of this entity type.
+ *
+ * @param  {Object} req The express request object.
+ * @param  {Object} res The express response object.
+ */
+Resource.prototype.delete = function(req,res) {
+    var self = this,
+        def = this.getDefinition();
+        model = self.getModel();
+    model.remove({_id: req._resourceId},function(err,rs) {
+        if(err || rs.result.n === 0) {
+            return Resource.sendError(res,404,'not found',err);
+        }
+        if(rs.result.n === 1) {
+            res.status(200).send();
+        } else {
+            // should never happen
+            return Resource.sendError(res,500,'remove reported '+rs.result.n+' objects deleted');
+        }
+    });
+};
+/**
  * Add a static link implementation to this resource.
  *
  * @param  {String} rel  The relative path of the link.
@@ -379,23 +426,27 @@ Resource.prototype.initRouter = function(app) {
         req._resourceId = id;
         next();
     });
-    router.post('/',(function(self){
-        return function(req,res) {
-            var Model = self.getModel(),
-                instance = new Model(req.body);
-            instance.save(function(err,saved){
-                if(err) {
-                    return Resource.sendError(res,500,'create failure',err);
-                }
-                // self.singleResponse(req,res,saved);
-                // re-fetch the object so that nested attributes are properly
-                // populated.
-                req._resourceId = saved._id;
-                self.findById(req,res);
-            });
-
-        };
-    })(this));
+    if(typeof(resource.create) === 'undefined' || resource.create) {
+        router.post('/',(function(self){
+            return function(req,res) {
+                self.create(req,res);
+            };
+        })(this));
+    }
+    if(typeof(resource.update) === 'undefined' || resource.update) {
+        router.put('/:id',(function(self){
+            return function(req,res) {
+                self.update(req,res);
+            };
+        })(this));
+    }
+    if(typeof(resource.delete) === 'undefined' || resource.delete) {
+        router.delete('/:id',(function(self){
+            return function(req,res) {
+                self.delete(req,res);
+            };
+        })(this));
+    }
     router.get('/:id',(function(self){
         return function(req,res) {
             self.findById(req,res);
