@@ -1,6 +1,6 @@
 var debug = require('debug')('Resource'),
     express = require('express'),
-    //odataParser = require("odata-parser"),
+    filterParser = require('./odata-filter'),
     querystring = require('querystring'),
     _ = require('lodash');
 
@@ -226,8 +226,7 @@ Resource.prototype.initQuery = function(query,req) {
         query.sort(def.$orderbyPaged);
     }
     if(def.$filter) {
-        var parsed = odataParser.parse('$filter='+def.$filter);
-        debug('parsed.$filter',parsed);
+        filterParser(query,def.$filter);
     }
     // save the query definiton for later re-use.
     req.$odataQueryDefinition = def;
