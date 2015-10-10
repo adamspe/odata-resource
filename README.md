@@ -2,6 +2,9 @@
 <!---
     jsdoc -d ../github/odata-resource/ index.js -R README.md
 -->
+
+See the [Home Page](https://adamspe.github.io/odata-resource/) for the contents of this README and the jsdoc for the Resource base class (the module's export).
+
 Node.Js module to allow for creation of REST resources served up via [ExpressJS](expressjs.com) and persisting data via [Mongoose](mongoosejs.com) that:
 
 - Supports [OData](http://www.odata.org/) query arguments like; `$filter`, `$orderby`, `$select`, `$top` and `$skip`.
