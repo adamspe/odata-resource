@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>odata-resource</h1><p>Node.Js module to allow for creation of REST resources served up via <a href="expressjs.com">ExpressJS</a> and persisting data via <a href="mongoosejs.com">Mongoose</a> that:</p>
+<ul>
+<li>Supports <a href="http://www.odata.org/">OData</a> query arguments like; <code>$filter</code>, <code>$orderby</code>, <code>$select</code>, <code>$top</code> and <code>$skip</code>.</li>
+<li>Supports simple, resource definitions requiring minimal code.</li>
+<li>Supports static and instance based relationships between entities.</li>
+<li>Allows for Mongoose models to be defined and used independent of the resource implementation.</li>
+<li>Allows for a high degree of customization/over-riding of default behavior.</li>
+</ul>
+<p>I found a few other modules that use the same basic components but invariably they wouldn't create the kinds of resources I wanted to be working with so I decided to write my own.</p>
+<h1>Requirements</h1><p>If exposing resources that support create (POST) and update (PUT) then your Express app must be able to parse JSON as input and you should use <a href="https://github.com/expressjs/body-parser">body-parser</a> to get that done.</p>
+<pre class="prettyprint source"><code>var app = require('express')();
+
+app.use(require('body-parser').json());</code></pre><h1>Limitations</h1><p>The <code>$filter</code> implementation is not entirely complete and is only <code>odata</code>'ish in nature.  Specifically support for all operators is not complete and, more importantly, the logical <code>or</code> is not implemented.  Since <code>or</code> is not implemented two non-odata operators <code>in</code> and <code>notin</code> have been implemented to try to fill that gap.  What is implemented:</p>
+<h2>Logical Operators</h2><ul>
+<li><code>eq</code> - Equal. E.g. <code>/api/books?$filter=title eq 'Book Title'</code></li>
+<li><code>ne</code> - Not equal. E.g. <code>/api/books?$filter=title ne 'Book Title'</code></li>
+<li><code>lt</code> - Less than. E.g. <code>/api/books?$filter=pages lt 200</code></li>
+<li><code>le</code> - Less than or equal. E.g. <code>/api/books?$filter=pages le 200</code></li>
+<li><code>gt</code> - Greater than. E.g. <code>/api/books?$filter=pages gt 200</code></li>
+<li><code>le</code> - Greater than or equal. E.g. <code>/api/books?$filter=pages ge 200</code></li>
+<li><code>and</code> - Logical and. E.g. <code>/api/books?$filter=pages ge 200 and pages le 400</code></li>
+</ul>
+<h2>Functions</h2><ul>
+<li><code>startswith</code> E.g. <code>/api/books?$filter=startswith(title,'The')</code></li>
+<li><code>endswith</code> E.g. <code>/api/books?$filter=endswith(title,'The')</code></li>
+<li><code>contains</code> E.g. <code>/api/books?$filter=contains(title,'The')</code></li>
+</ul>
+<h2>Non-Odata</h2><ul>
+<li><code>in</code> E.g. <code>/api/books?$filter=in(genre,'Action','Drama')</code></li>
+<li><code>notin</code> E.g. <code>/api/books?$filter=notin(genre,'Action','Drama')</code></li>
+</ul>
+<p><em>Case Sensitivity:</em> Due to the performance implications on large collections all string related filtering is unadulterated meaning it's case sensitive.  For the time being if you need case insensitive filtering you may need to consider a solution like storing a lower case version of the property you wish to perform such filtering on.</p>
+<h1>Examples</h1><p>The most basic resource might look something like:</p>
+<pre class="prettyprint source"><code>var mongoose = require('mongoose')
+    Resource = require('odata-resource'),
+    app = require('express')();
+
+// build the Mongoose Model
+var bookModel = mongoose.model('Book',{
+        title: String,
+        genre: String
+    });
+
+// define the REST resource
+var bookResource = new Resource({
+    rel: '/api/books',
+    model: bookModel
+});
+
+// setup the routes
+bookResource.initRouter(app);</code></pre><p>A more complex set of objects might define relationships to one another like:</p>
+<pre class="prettyprint source"><code>var models = {
+    Author: mongoose.model('Author',{
+        firstname: { type: String, required: true, trim: true },
+        lastname: { type: String, required: true, trim: true }
+    }),
+    Book: mongoose.model('Book',{
+        title: { type: String, required: true, trim: true },
+        _author: {type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Author'},
+        genre: { type: String, required: true, trim: true },
+        pages: { type: Number, required: false, min: 1 }
+    }),
+    Review: mongoose.model('Review',{
+        _book: {type: mongoose.Schema.Types.ObjectId, required: true},
+        content: { type: String, required: true, trim: true },
+        stars: { type: Number, required: true, min: 1, max: 5 },
+        updated: { type: Date, default: Date.now }
+    })
+};
+
+var authors = new Resource({
+        rel: '/api/authors',
+        model: models.Author,
+    })
+    // Note: this implementation of a custom relationship is just an
+    // example.  In this simple case you wouldn't do this because the
+    // more simple declarative version (like /api/books/&lt;id>/reviews below)
+    // would suffice, you'd just need to postpone the call to
+    // instanceLink until -after- the books resource was created
+    .instanceLink('books',function(req,res){ // custom relationship
+        var query = books.initQuery(books.getModel().find({_author: req._resourceId}),req);
+        query.exec(function(err,bks){
+            if(err){
+                return Resource.sendError(res,500,'error finding books',err);
+            }
+            books.listResponse(req,res,bks);
+        });
+    }),
+    reviews = new Resource({
+        rel: '/api/reviews',
+        model: models.Review
+    }),
+    books = new Resource({
+        rel: '/api/books',
+        model: models.Book,
+        $orderby: 'title',
+        populate: '_author'
+    }).instanceLink('reviews',{ // simple instance based relationship
+        otherSide: reviews,
+        key: '_book'
+    }).staticLink('genres',function(req,res){ // static type based relationship
+        this.getModel().distinct('genre',function(err,genres){
+            if(err){
+                return Resource.sendError(res,500,'error getting genres',err);
+            }
+            res.send(genres);
+        });
+    });</code></pre><p>Default functionality can be over-ridden.  For example perhaps you have some middleware that annotates the incoming request with the authenticated user (<code>req.user</code>) and you want:</p>
+<ul>
+<li>To expose a static relationship named <code>me</code> that simply returns the currently logged in user.</li>
+<li>To prevent non-administrative users from seeing the existence of other users via list.</li>
+<li>To never expose a property containing sensitive information named <code>secret</code>.</li>
+</ul>
+<pre class="prettyprint source"><code>var users = new Resource({
+            rel: '/api/users',
+            model: User,
+            $select: '-secret', // under normal operation don't expose 'secret'
+        });
+    users.staticLink('me',function(req,res) {
+        users.singleResponse(req,res,req.user,function(u){
+            // using annotated object so need to drop secret explicitly
+            u.secret = undefined;
+            return u;
+        });
+    });
+    // override the list (/api/users?$orderby=...)
+    users.find = (function(self){
+        var superFind = self.find;
+        return function(req,res) {
+            if(!req.user.isAdmin()) {
+                // not an admin, only let them see themselves, but do
+                // so as a normal list response so that the response can
+                // also carry meta information.
+                return users.listResponse(req,res,[req.user],function(u){
+                    u.secret = undefined;
+                    return u;
+                });
+            }
+            return superFind.apply(self,arguments);
+        };
+    })(users);</code></pre><h1>Testing</h1><p>Requires that <code>mongod</code> be running on the default port.</p>
+<pre class="prettyprint source"><code>% npm install -g mocha
+...
+% npm test</code></pre></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Resource.html">Resource</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.2</a> on Sat Oct 10 2015 10:07:30 GMT-0500 (CDT)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
