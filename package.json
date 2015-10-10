@@ -1,6 +1,6 @@
 {
   "name": "odata-resource",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "REST + OData + Mongoose/MongoDb",
   "main": "index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   "bugs": {
     "url": "https://github.com/adamspe/odata-resource/issues"
   },
-  "homepage": "https://github.com/adamspe/odata-resource#readme",
+  "homepage": "https://adamspe.github.io/odata-resource/",
   "dependencies": {
     "debug": "^2.2.0",
     "express": "^4.13.3",
