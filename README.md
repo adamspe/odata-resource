@@ -1,8 +1,6 @@
 # odata-resource
 
-**Under Development, incomplete (subset of $filter functionality) and in-flux**
-
-Node.Js module intended to allow for creation of REST resources served up via [ExpressJS](expressjs.com) and persisting data via [Mongoose](mongoosejs.com) that:
+Node.Js module to allow for creation of REST resources served up via [ExpressJS](expressjs.com) and persisting data via [Mongoose](mongoosejs.com) that:
 
 - Supports [OData](http://www.odata.org/) query arguments like; `$filter`, `$orderby`, `$select`, `$top` and `$skip`.
 - Supports simple, resource definitions requiring minimal code.
@@ -21,6 +19,30 @@ var app = require('express')();
 
 app.use(require('body-parser').json());
 ```
+
+# Limitations
+
+The `$filter` implementation is not entirely complete and is only `odata`'ish in nature.  Specifically support for all operators is not complete and, more importantly, the logical `or` is not implemented.  Since `or` is not implemented two non-odata operators `in` and `notin` have been implemented to try to fill that gap.  What is implemented:
+
+## Logical Operators
+- `eq` - Equal. E.g. `/api/books?$filter=title eq 'Book Title'`
+- `ne` - Not equal. E.g. `/api/books?$filter=title ne 'Book Title'`
+- `lt` - Less than. E.g. `/api/books?$filter=pages lt 200`
+- `le` - Less than or equal. E.g. `/api/books?$filter=pages le 200`
+- `gt` - Greater than. E.g. `/api/books?$filter=pages gt 200`
+- `le` - Greater than or equal. E.g. `/api/books?$filter=pages ge 200`
+- `and` - Logical and. E.g. `/api/books?$filter=pages ge 200 and pages le 400`
+
+## Functions
+- `startswith` E.g. `/api/books?$filter=startswith(title,'The')`
+- `endswith` E.g. `/api/books?$filter=endswith(title,'The')`
+- `contains` E.g. `/api/books?$filter=contains(title,'The')`
+
+## Non-Odata
+- `in` E.g. `/api/books?$filter=in(genre,'Action','Drama')`
+- `notin` E.g. `/api/books?$filter=notin(genre,'Action','Drama')`
+
+_Case Sensitivity:_ Due to the performance implications on large collections all string related filtering is unadulterated meaning it's case sensitive.  For the time being if you need case insensitive filtering you may need to consider a solution like storing a lower case version of the property you wish to perform such filtering on.
 
 # Examples
 
@@ -52,25 +74,33 @@ A more complex set of objects might define relationships to one another like:
 ```
 var models = {
     Author: mongoose.model('Author',{
-        firstname: String,
-        lastname: String
+        firstname: { type: String, required: true, trim: true },
+        lastname: { type: String, required: true, trim: true }
     }),
     Book: mongoose.model('Book',{
-        title: String,
-        _author: {type: mongoose.Schema.Types.ObjectId, ref: 'Author'},
-        genre: String
+        title: { type: String, required: true, trim: true },
+        _author: {type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Author'},
+        genre: { type: String, required: true, trim: true },
+        pages: { type: Number, required: false, min: 1 }
     }),
     Review: mongoose.model('Review',{
-        _book: mongoose.Schema.Types.ObjectId,
-        content: String,
-        stars: Number
+        _book: {type: mongoose.Schema.Types.ObjectId, required: true},
+        content: { type: String, required: true, trim: true },
+        stars: { type: Number, required: true, min: 1, max: 5 },
+        updated: { type: Date, default: Date.now }
     })
 };
 
 var authors = new Resource({
         rel: '/api/authors',
         model: models.Author,
-    }).instanceLink('books',function(req,res){ // custom relationship
+    })
+    // Note: this implementation of a custom relationship is just an
+    // example.  In this simple case you wouldn't do this because the
+    // more simple declarative version (like /api/books/<id>/reviews below)
+    // would suffice, you'd just need to postpone the call to
+    // instanceLink until -after- the books resource was created
+    .instanceLink('books',function(req,res){ // custom relationship
         var query = books.initQuery(books.getModel().find({_author: req._resourceId}),req);
         query.exec(function(err,bks){
             if(err){

@@ -10,7 +10,7 @@ var debug = require('debug')('Resource'),
  * <p>Keys</p>
  *
  * <ul>
- * <li>model (object): The instane of the Mongoose model (required).</li>
+ * <li>model (object): The instance of the Mongoose model (required).</li>
  * <li>rel (string): The absolute path of the new resource (required).</li>
  * <li>create (boolean): Specifies if the resource should support create (POST) (default true).</li>
  * <li>update (boolean): Specifies if the resource should support update (PUT) (default true).</li>
@@ -152,7 +152,7 @@ Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
         next(null,response);
     }
 };
-/**
+/* not js-doc, don't want in output.
  * Translates an Odata $orderby clause into a mongo version.
  * http://www.odata.org/documentation/odata-version-2-0/uri-conventions/ (section 4.2)
  *
@@ -427,7 +427,7 @@ Resource.prototype.instanceLink = function(rel,link) {
 }
 /**
  * Initializes and returns an express router.
- * If app is supplied then app.use is called to beind the
+ * If app is supplied then app.use is called to bind the
  * resource's 'rel' to the router.
  *
  * @param  {object} app Express app (optional).
