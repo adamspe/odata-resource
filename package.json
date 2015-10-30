@@ -1,6 +1,6 @@
 {
   "name": "odata-resource",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "REST + OData + Mongoose/MongoDb",
   "main": "index.js",
   "scripts": {
@@ -24,10 +24,10 @@
   "homepage": "https://adamspe.github.io/odata-resource/",
   "dependencies": {
     "debug": "^2.2.0",
-    "express": "^4.13.3",
     "lodash": "^3.10.1"
   },
   "devDependencies": {
+    "express": "^4.13.3",
     "body-parser": "^1.14.0",
     "chai": "^3.3.0",
     "mongoose": "^4.1.8",
