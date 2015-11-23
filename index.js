@@ -279,7 +279,7 @@ Resource.prototype.findById = function(req,res) {
         def = this.getDefinition();
         query = this.initQuery(self.getModel().findById(req._resourceId),req);
     query.exec(function(err,obj){
-        if(err) {
+        if(err || !obj) {
             Resource.sendError(res,404,'not found',err);
         } else {
             self.singleResponse(req,res,obj);

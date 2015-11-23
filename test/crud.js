@@ -203,13 +203,16 @@ describe('CRUD',function(){
                     }
                     author._id = res.body._id;
                     util.testAuthor(res.body,author);
-                    api.delete(res.body._links.self)
+                    var selfLink = res.body._links.self;
+                    api.delete(selfLink)
                        .expect(200)
                        .end(function(err,res){
                             if(err) {
                                 return done(err);
                             }
-                            done();
+                            api.get(selfLink)
+                               .expect(404)
+                               .end(done);
                        });
                 });
         });
