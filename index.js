@@ -366,17 +366,18 @@ Resource.prototype.update = function(req,res) {
  */
 Resource.prototype.delete = function(req,res) {
     var self = this,
-        model = self.getModel();
-    model.remove({_id: req._resourceId},function(err,rs) {
-        if(err || rs.result.n === 0) {
+        query = self.initQuery(self.getModel().findById(req._resourceId),req);
+    query.lean(false); // need the object itself regardless of how the resource is defined
+    query.exec(function(err,obj){
+        if(err || !obj) {
             return Resource.sendError(res,404,'not found',err);
         }
-        if(rs.result.n === 1) {
+        obj.remove(function(err,obj){
+            if(err) {
+                return Resource.sendError(res,500,'remove error');
+            }
             res.status(200).send();
-        } else {
-            // should never happen
-            return Resource.sendError(res,500,'remove reported '+rs.result.n+' objects deleted');
-        }
+        });
     });
 };
 /**

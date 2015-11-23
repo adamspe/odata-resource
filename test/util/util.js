@@ -3,7 +3,7 @@ var mongoose = require('mongoose'),
     config = require('../api/config'),
     models = require('../api/models'),
     app = require('../api/app'),
-    api = require('supertest')(app);
+    api = require('supertest').agent(app);
 
 var util = {
     models: models,
