@@ -24,13 +24,15 @@ var authors = new Resource({
     }),
     reviews = new Resource({
         rel: '/api/reviews',
-        model: models.Review
+        model: models.Review,
+        count: true
     }),
     books = new Resource({
         rel: '/api/books',
         model: models.Book,
         $orderby: 'title',
-        populate: '_author'
+        populate: '_author',
+        count: true
     }).instanceLink('reviews',{
         otherSide: reviews,
         key: '_book'

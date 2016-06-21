@@ -41,6 +41,7 @@ var util = {
         var links = author._links;
         links.should.have.property('self','/api/authors/'+expect._id);
         links.should.have.property('books','/api/authors/'+expect._id+'/books');
+        links.should.not.have.property('count');
     },
     testBook: function(book,expect,expectAuthor) {
         book.should.have.property('title',expect.title);

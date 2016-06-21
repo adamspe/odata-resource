@@ -119,6 +119,19 @@ describe('Basic Read',function(){
                     res.body.should.have.property('_links').and.be.instanceof(Object);
                     var links = res.body._links;
                     links.should.have.property('genres','/api/books/genres');
+                    // not turned on by default
+                    links.should.not.have.property('count');
+                    return done();
+                });
+        });
+
+        it('should not support count',function(done) {
+            api.get('/api/authors/count')
+                .expect(404)
+                .end(function(err,res){
+                    if(err) {
+                        return done(err);
+                    }
                     return done();
                 });
         });
@@ -204,6 +217,8 @@ describe('Basic Read',function(){
                 if(err) {
                     return done(err);
                 }
+                res.body.should.have.property('_links').and.be.instanceof(Object);
+                res.body._links.should.have.property('count','/api/books/'+theBooks[0]._id+'/reviews/count');
                 res.body.should.be.instanceof(Object);
                 res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(2);
                 res.body.list.forEach(function(r,i) {
@@ -237,6 +252,32 @@ describe('Basic Read',function(){
                     res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(0);
                     return done();
                });
+        });
+
+        it('should count two books',function(done){
+            api.get('/api/books/count')
+                .expect(200)
+                .expect('Content-Type',/json/)
+                .end(function(err,res){
+                    if(err) {
+                        return done(err);
+                    }
+                    res.body.should.be.instanceof(Number).and.equal(2);
+                    return done();
+                });
+        });
+
+        it('book with reviews count two',function(done) {
+            api.get('/api/books/'+theBooks[0]._id+'/reviews/count')
+               .expect(200)
+               .expect('Content-Type', /json/)
+               .end(function(err,res){
+                    if(err) {
+                        return done(err);
+                    }
+                    res.body.should.be.instanceof(Number).and.equal(2);
+                    return done();
+                });
         });
     });
 });

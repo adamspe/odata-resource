@@ -172,6 +172,92 @@ var users = new Resource({
         };
     })(users);
 ```
+# Count (experimental)
+
+An implicit relationship `count` (similar to the odata `$count`) has been added that will return the integer count of a resource when listed or traversed from another entity relationship.
+
+**Important:** This functionality must be explicitly enabled when constructing a resource by specifying the `count` key on the resource definition object.
+
+For example:
+
+```
+var reviews = new Resource({
+        rel: '/api/reviews',
+        model: models.Review,
+        count: true
+    }),
+    books = new Resource({
+        rel: '/api/books',
+        model: models.Book,
+        $orderby: 'title',
+        count: true
+    }).instanceLink('reviews',{ // simple instance based relationship
+        otherSide: reviews,
+        key: '_book'
+    });
+```
+
+Then list responses for `/api/books` and `/api/reviews` will contain a static link named `count` that will allow for counting of listed entities.  Similarly when traversing the relationship from `book` to `review` like `/api/book/<id>/reviews` a `count` relationship will be exposed on the reviews response allowing those results to be counted.
+
+In both cases the `$filter` parameter will be honored.  For example `/api/books/count` will return the total number of books while `/api/books/count?$filter=pages ge 100` will the number of books with more than 99 pages.
+
+The same holds true for relationships.  For example `/api/books/<id>/reviews` will return the number of reviews for a given book while `/api/books/<id>/reviews?$filter=stars gt 1` will return the number of reviews for a given book with more than one star.
+
+Example output without `$filter` for a book's reviews like `/api/books/<id>/reviews`:
+
+```
+{
+    list: [{
+        _id: "5768a1f6db20b190e421c777",
+        content: "Loved it!",
+        stars: 5,
+        _book: "5768a1f6db20b190e421c775",
+        updated: "2016-06-21T02:09:58.199Z",
+        __v: 0,
+        _links: {
+            self: "/api/reviews/5768a1f6db20b190e421c777"
+        }
+    },{
+        _id: "5768a1f6db20b190e421c778",
+        content: "Hated it!",
+        stars: 1,
+        _book: "5768a1f6db20b190e421c775",
+        updated: "2016-06-21T02:09:58.201Z",
+        __v: 0,
+        _links: {
+            self: "/api/reviews/5768a1f6db20b190e421c778"
+        }
+    }],
+    _links: {
+        count: "/api/books/5768a1f6db20b190e421c775/reviews/count"
+    }
+}
+```
+
+Example output with `$filter` for a book's five star reviews like `/api/books/<id>/reviews?$filter=stars eq 5`
+
+```
+{
+    list: [{
+        _id: "5768a1f6db20b190e421c777",
+        content: "Loved it!",
+        stars: 5,
+        _book: "5768a1f6db20b190e421c775",
+        updated: "2016-06-21T02:09:58.199Z",
+        __v: 0,
+        _links: {
+            self: "/api/reviews/5768a1f6db20b190e421c777"
+        }
+    }],
+    _links: {
+        count: "/api/books/5768a1f6db20b190e421c775/reviews/count?%24filter=stars%20eq%205"
+    }
+}
+```
+
+In the relationship case it's important to understand that it's the "other side" object that dictates wether the `count` relationship will be added.  In the above example if `count` had not been specified (or set to `false`) when constructing the reviews resource then there woudl be no such relationship like `/api/books/<id>/reviews/count` because reviews don't support counting.
+
+The routes for `count` only exist for basic relationships where the `instanceLink` function is supplied `otherSide` and `key` as input.
 
 # Testing
 

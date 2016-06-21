@@ -18,6 +18,7 @@ var debug = require('debug')('Resource'),
  * <li>lean (boolean): Whether find[ById] queries should be 'lean' and return pojos (default true).  If false then
  *         resource instances, prior to mapping an object for return, could make use of methods on the instance model.</li>
  * <li>populate (string||Array): Specifies a property, or list of properties, to populate into objects.</li>
+ * <li>count (boolean): Specifies if the resource should support counts on find and when traversed to by standard relationships from other types (default: false).</li>
  * </ul>
  *
  * <p>The following keys set defaults for possible query arguments.</p>
@@ -38,7 +39,13 @@ var debug = require('debug')('Resource'),
  * @param {Object} definition The resource definition.
  */
 var Resource = function(definition) {
-    this._definition = definition;
+    var self = this;
+    this._definition = _.extend({count: false},definition);
+    if(this._definition.count) {
+        this._definition.staticLinks = {
+            'count': function(req,res) { self.count(req,res); }
+        }
+    }
 };
 /**
  * Send a response error.
@@ -107,28 +114,12 @@ Resource.prototype.singleResponse = function(req,res,obj,postMapper,next) {
         next(null,response);
     }
 };
-/**
- * Sends a list response.
- *
- * @param  {Object}   req        The express request object.
- * @param  {Object}   res        The express response object.
- * @param  {Array}   objs        The array of objects to send.
- * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
- * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
- */
-Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
+Resource.prototype._listResponse = function(linkGenerator,req,res,objs,postMapper,next) {
     var response = {
             list: objs.map(this.getMapper(postMapper))
         },
-        rel = this.getRel(),
-        links = this.getStaticLinkNames(),
         qDef = req.$odataQueryDefinition;
-    if(links.length) {
-        response._links = {};
-        links.forEach(function(link) {
-            response._links[link] = rel+'/'+link;
-        });
-    }
+    response._links = linkGenerator(req,response);
     if(qDef && qDef.$top) {
         // next,prev links
         response._links = response._links||{};
@@ -151,6 +142,91 @@ Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
     if(typeof(next) === 'function') {
         next(null,response);
     }
+};
+Resource.prototype._findListResponse = function(req,res,objs,postMapper,next) {
+    var rel = this.getRel(),
+        links = this.getStaticLinkNames(),
+        def = this.getDefinition();
+    this._listResponse(function(){
+        if(links.length) {
+            var lnks = links.reduce(function(map,link){
+                map[link] = rel+'/'+link;
+                return map;
+            },{});
+            if(def.count && lnks.count) {
+                var q = _.extend({},(req.query||{}));
+                delete q.$top;
+                delete q.$skip;
+                delete q.$orderby;
+                if(Object.keys(q).length) {
+                    lnks.count += '?'+querystring.stringify(q);
+                }
+            } else if (!def.count) {
+                delete lnks.count;
+            }
+            return lnks;
+        }
+    },req,res,objs,postMapper,next);
+};
+/**
+ * Sends a list response.
+ *
+ * @param  {Object}   req        The express request object.
+ * @param  {Object}   res        The express response object.
+ * @param  {Array}   objs        The array of objects to send.
+ * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
+ * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ */
+Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
+    var rel = this.getRel(),
+        links = this.getStaticLinkNames();
+    this._listResponse(function(){
+        if(links.length) {
+            return links.reduce(function(map,link){
+                if(link !== 'count') {
+                    map[link] = rel+'/'+link;
+                }
+                return map;
+            },{});
+        }
+    },req,res,objs,postMapper,next);
+};
+/**
+ * Sends a list response when a relationship is traversed.  This is used for standard relationships to allow the
+ * static count link to be handled.
+ *
+ * @param  {Object}   req        The express request object.
+ * @param  {Object}   res        The express response object.
+ * @param  {Array}   objs        The array of objects to send.
+ * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
+ * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ */
+Resource.prototype.relListResponse = function(req,res,objs,postMapper,next) {
+    var rel = this.getRel(),
+        links = this.getStaticLinkNames(),
+        def = this.getDefinition()
+    this._listResponse(function(){
+        var lnks = links.reduce(function(map,link){
+                map[link] = rel+'/'+link;
+                return map;
+            },{});
+        if(def.count) {
+            // replace count
+            var q = _.extend({},(req.query||{}));
+            delete q.$top;
+            delete q.$skip;
+            delete q.$orderby;
+            if(Object.keys(q).length) {
+                lnks.count = req.originalUrl.substring(0,req.originalUrl.indexOf('?'))+'/count?'+querystring.stringify(q);
+            } else {
+                q = req.originalUrl.indexOf('?');
+                lnks.count = (q !== -1 ? req.originalUrl.substring(0,q) : req.originalUrl)+'/count';
+            }
+        } else {
+            delete lnks.count;
+        }
+        return lnks;
+    },req,res,objs,postMapper,next);
 };
 /* not js-doc, don't want in output.
  * Translates an Odata $orderby clause into a mongo version.
@@ -302,7 +378,26 @@ Resource.prototype.find = function(req,res) {
             Resource.sendError(res,500,'find failed',err);
         } else {
             debug('found %d objects.', objs.length);
-            self.listResponse(req,res,objs);
+            self._findListResponse(req,res,objs);
+        }
+    });
+};
+/**
+ * Executes a query for an entity type and returns the number of objects found.
+ * Resources may override this default functionality.
+ *
+ * @param  {Object} req The express request object.
+ * @param  {Object} res The express response object.
+ */
+Resource.prototype.count = function(req,res) {
+    var self = this,
+        def = this.getDefinition(),
+        query = this.initQuery(self.getModel().find(),req);
+    query.count(function(err,n){
+        if(err){
+            Resource.sendError(res,500,'find failed',err);
+        } else {
+            res.json(n);
         }
     });
 };
@@ -486,6 +581,7 @@ Resource.prototype.initRouter = function(app) {
             self.find(req,res);
         };
     })(this));
+
     if(resource.instanceLinks) {
         Object.keys(resource.instanceLinks).forEach(function(link){
             var linkObj = resource.instanceLinks[link],
@@ -497,6 +593,22 @@ Resource.prototype.initRouter = function(app) {
                     };
                 })(self));
             } else if(linkObj.otherSide instanceof Resource && linkObj.key) {
+                if(linkObj.otherSide.getDefinition().count) {
+                    router.get('/:id/'+link+'/count',
+                        (function(self,otherSide,key) {
+                            return function(req,res) {
+                                var criteria = {};
+                                criteria[key] = req._resourceId;
+                                var query = otherSide.initQuery(otherSide.getModel().find(criteria),req);
+                                query.count(function(err,n){
+                                    if(err) {
+                                        return Resource.sendError(res,500,'error resolving relationship',err)
+                                    }
+                                    res.json(n);
+                                });
+                            };
+                        })(self,linkObj.otherSide,linkObj.key));
+                }
                 router.get('/:id/'+link,
                     (function(self,otherSide,key) {
                         return function(req,res) {
@@ -507,7 +619,7 @@ Resource.prototype.initRouter = function(app) {
                                 if(err) {
                                     return Resource.sendError(res,500,'error resolving relationship',err)
                                 }
-                                otherSide.listResponse(req,res,objs);
+                                otherSide.relListResponse(req,res,objs);
                             });
                         };
                     })(self,linkObj.otherSide,linkObj.key));
