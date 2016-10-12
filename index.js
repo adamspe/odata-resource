@@ -287,10 +287,10 @@ Resource.prototype.initQuery = function(query,req) {
         query.lean(true); // by default go straight to a JavaScript object
     }
     if(def.$top) {
-        query.limit(def.$top);
+        query.limit(+def.$top);
     }
     if(def.$skip) {
-        query.skip(def.$skip);
+        query.skip(+def.$skip);
     }
     if(def.$orderby) {
         query.sort(odataOrderBy(def.$orderby));
