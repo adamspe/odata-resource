@@ -3,7 +3,8 @@ var mongoose = require('mongoose');
 module.exports = {
     Author: mongoose.model('Author',{
         firstname: { type: String, required: true, trim: true },
-        lastname: { type: String, required: true, trim: true }
+        lastname: { type: String, required: true, trim: true },
+        middlename: { type: String, required: false, trim: true }
     }),
     Book: mongoose.model('Book',{
         title: { type: String, required: true, trim: true },

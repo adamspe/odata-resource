@@ -166,6 +166,9 @@ OdataExpressionParser.prototype.castSimple = function(token) {
             if(token.token == 'true' || token.token == 'false') {
                 return new OdataBooleanLiteral(token.token == 'true');
             }
+            if(token.token === 'null') {
+                return new OdataStringLiteral(null);
+            }
             return new OdataProperty(token.token);
         default:
             throw 'Unexpected token '+ token.token + ' (expected simple).';

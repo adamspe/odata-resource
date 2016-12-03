@@ -7,6 +7,7 @@ var should = require('should'),
 describe('Filter',function(){
     var authorOne = {
             firstname: 'Joe',
+            middlename: 'The',
             lastname: 'Author'
         },
         authorTwo = {
@@ -304,5 +305,41 @@ describe('Filter',function(){
                 util.testBook(res.body.list[1],theBooks[0],authorOne);
                 done();
            });
+    });
+
+    it('not null',function(done){
+        api.get('/api/authors?$filter=middlename ne null')
+        .expect(200)
+        .expect('Content-Type', /json/)
+        .end(function(err,res) {
+             if(err) {
+                 return done(err);
+             }
+             res.body.should.be.instanceof(Object);
+             res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(1);
+             var author = res.body.list[0];
+             author.should.have.property('firstname').and.equal('Joe');
+             author.should.have.property('middlename').and.equal('The');
+             author.should.have.property('lastname').and.equal('Author');
+             done();
+        });
+    });
+
+    it('null',function(done){
+        api.get('/api/authors?$filter=middlename eq null')
+        .expect(200)
+        .expect('Content-Type', /json/)
+        .end(function(err,res) {
+             if(err) {
+                 return done(err);
+             }
+             res.body.should.be.instanceof(Object);
+             res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(1);
+             var author = res.body.list[0];
+             author.should.have.property('firstname').and.equal('William');
+             author.should.have.property('lastname').and.equal('Writer');
+             author.should.not.have.property('middlename');
+             done();
+        });
     });
 });
