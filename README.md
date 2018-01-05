@@ -27,7 +27,7 @@ app.use(require('body-parser').json());
 
 # Limitations
 
-The `$filter` implementation is not entirely complete and is only `odata`'ish in nature.  Specifically support for all operators is not complete and, more importantly, the logical `or` is not implemented.  Since `or` is not implemented two non-odata operators `in` and `notin` have been implemented to try to fill that gap.  What is implemented:
+The `$filter` implementation is not entirely complete and is only `odata`'ish in nature.  Support for all operators is not complete.  Two non-odata operators `in` and `notin` have been implemented.  What is implemented:
 
 ## Logical Operators
 - `eq` - Equal. E.g. `/api/books?$filter=title eq 'Book Title'`
@@ -37,6 +37,7 @@ The `$filter` implementation is not entirely complete and is only `odata`'ish in
 - `gt` - Greater than. E.g. `/api/books?$filter=pages gt 200`
 - `le` - Greater than or equal. E.g. `/api/books?$filter=pages ge 200`
 - `and` - Logical and. E.g. `/api/books?$filter=pages ge 200 and pages le 400`
+- `or` - Logical and. E.g. `/api/books?$filter=genre eq 'Action' or genre eq 'Fantasy'`
 
 ## Functions
 - `startswith` E.g. `/api/books?$filter=startswith(title,'The')`
@@ -46,6 +47,12 @@ The `$filter` implementation is not entirely complete and is only `odata`'ish in
 ## Non-Odata
 - `in` E.g. `/api/books?$filter=in(genre,'Action','Drama')`
 - `notin` E.g. `/api/books?$filter=notin(genre,'Action','Drama')`
+
+Parenthesis can be used in `$filter` to group logical conditions.  You just cannot mix `and` and `or` within a single sub-expression (set of parenthesis).
+
+Examples:
+`/api/books?$filter=(genre eq 'Action' or genre eq 'Fantasy') and pages lt 500`
+`/api/books?$filter=(genre eq 'Action' or genre eq 'Fantasy') and (contains(title,'Lion') or contains(title,'Dragon'))`
 
 _Case Sensitivity:_ Due to the performance implications on large collections all string related filtering is unadulterated meaning it's case sensitive.  For the time being if you need case insensitive filtering you may need to consider a solution like storing a lower case version of the property you wish to perform such filtering on.
 
@@ -268,3 +275,7 @@ Requires that `mongod` be running on the default port.
 ...
 % npm test
 ```
+
+# New in 1.0
+
+The `or` operator has been implemented for the `$filter` parameter and the use of parenthesis for grouping within `$filter`.

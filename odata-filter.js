@@ -8,6 +8,8 @@ OdataCommon.prototype.visit = function(visitor) {
             throw 'Expression visitor does not implement \''+this.method+'\'';
         }
         visitor[this.method](this);
+    } else {
+        throw 'No visitor method defined';
     }
 };
 
@@ -57,17 +59,26 @@ var OdataProperty = function(prop) {
 OdataProperty.prototype = new OdataCommon();
 OdataProperty.prototype.getPropertyName = function() { return this.property; };
 
-OdataBoolCommonExpression = function() {
+var OdataBoolCommonExpression = function() {
     this.sub_expressions = [];
+    OdataCommon.apply(this,[null/* operator gets set later */]);
 };
+OdataBoolCommonExpression.prototype = new OdataCommon();
 OdataBoolCommonExpression.prototype.isEmpty = function() { return this.sub_expressions.length === 0; };
 OdataBoolCommonExpression.prototype.addSubExpression = function(sub) { this.sub_expressions.push(sub); };
-OdataBoolCommonExpression.prototype.visit = function(visitor) {
-    this.sub_expressions.forEach(function(expr) {
-        expr.visit(visitor);
-    });
-};
-
+OdataBoolCommonExpression.prototype.visit = (function(superFunc){
+    return function(visitor) {
+        var self = this;
+        // wrapping a single simple expression in an and/or
+        // when there's nothing to and/or it with.
+        // e.g. "name eq 'foo'"
+        if(!self.method && self.sub_expressions.length === 1) {
+            self.sub_expressions[0].visit(visitor);
+            return;
+        }
+        superFunc.apply(self,arguments);
+    };
+})(OdataBoolCommonExpression.prototype.visit);
 
 var WHITESPACE = 0,
     QUOTED_STRING = 1,
@@ -77,16 +88,15 @@ var WHITESPACE = 0,
     CLOSE_PAREN = 5,
     SYMBOL = 6,
     COMPARISONS = ['eq','ne','lt','le','gt','ge'],
-    LOGICALS = ['and']//,'or'],
+    LOGICALS = ['and','or'],
     METHODS = ['contains','startswith','endswith','in','notin'],
     IS_ALPHA_NUM = /^[a-z0-9_]+$/i, // added _ since it's common to prefix mongo properties with _
     IS_NUM = /^[0-9]+$/;
 
 var OdataExpressionParser = function() {
 };
-OdataExpressionParser.prototype.parse = function(filter) {
-    var tokens = this.tokenize(filter),
-        bce = new OdataBoolCommonExpression(),
+OdataExpressionParser.prototype.handleSubexpression = function(tokens) {
+    var bce = new OdataBoolCommonExpression(),
         token,method,args,word1,comparison,word2;
     if(tokens.length) {
         while(true) {
@@ -98,7 +108,16 @@ OdataExpressionParser.prototype.parse = function(filter) {
                 if(!this.isLogical(token)) {
                     throw 'Expected logical operator but received \''+token.token+'\'';
                 }
+                if(!bce.method) {
+                    bce.method = token.token;
+                } else if(bce.method !== token.token) {
+                    throw 'Mixing of logical operators without grouping parenthesis not supported';
+                }
                 token = this.pop(tokens,true,true);
+            }
+            if(token instanceof OdataBoolCommonExpression) {
+                bce.addSubExpression(token);
+                continue;
             }
             if(token.type !== WORD) {
                 throw 'Expected word but got \''+token.token+'\'';
@@ -133,6 +152,90 @@ OdataExpressionParser.prototype.parse = function(filter) {
         }
     }
     return bce;
+};
+OdataExpressionParser.prototype.parse = function(filter) {
+    var tokens = this.tokenize(filter),
+        i,tok,
+        cParen,subExpr;
+
+    // iterate over the expression looking for nested parenthesized
+    // when found replace their tokens with their parsed expression
+    // repeat until no nested parenthesized expressions are found
+    do {
+        subExpr = null;
+        for(i = tokens.length-1; i >= 0; i--) {
+            i = this._skipHandledExpressions(tokens,i);
+            if(i <= 0) {
+                break;
+            }
+            tok = tokens[i];
+            if(this.isMethod(tok)) {
+                i = this._skipMethod(tokens,i);
+                if(i === 0) {
+                    // method ends expression
+                    break;
+                }
+                continue;
+            }
+            if(tok.type === OPEN_PAREN) {
+                if((cParen = this._endOfInnermostSubExpression(tokens,i)) >= 0) {
+                  subExpr = this.handleSubexpression(tokens.slice(cParen+1,i));
+                  // replace the tokens with the subExpr
+                  tokens.splice(cParen,(i-cParen)+1,subExpr);
+                  break;
+                }
+            }
+        }
+    } while(subExpr);
+
+    return this.handleSubexpression(tokens);
+};
+OdataExpressionParser.prototype._skipHandledExpressions = function(tokens,i) {
+    var tok;
+    while(i >= 0) {
+        tok = tokens[i];
+        if(tok instanceof OdataBoolCommonExpression) {
+            i--;
+        } else {
+            break;
+        }
+    }
+    return i;
+};
+OdataExpressionParser.prototype._skipMethod = function(tokens,methodIndex) {
+    var i = methodIndex-1;
+    if(i < 0) {
+        throw 'Unexpected end of expression';
+    }
+    var tok = tokens[i];
+    if(tok.type !== OPEN_PAREN) {
+        throw 'Missing open parenthesis on method';
+    }
+    while(i >= 0 && tok.type !== CLOSE_PAREN) {
+        tok = tokens[--i];
+    }
+    return i;
+};
+OdataExpressionParser.prototype._endOfInnermostSubExpression = function(tokens,openParen) {
+    var i,tok;
+    for(i = openParen-1; i >= 0; i--) {
+        i = this._skipHandledExpressions(tokens,i);
+        tok = tokens[i];
+        if(this.isMethod(tok)) {
+            i = this._skipMethod(tokens,i);
+            if(i === 0) {
+                throw 'Unexpected end of expression';
+            }
+            continue;
+        }
+        if(tok.type === OPEN_PAREN) {
+            return -1; // another nested expression
+        }
+        if(tok.type === CLOSE_PAREN) {
+            return i; // hit end of expression before close
+        }
+    }
+    return -1;
 };
 OdataExpressionParser.prototype.pop = function(tokens,skip_white,complain,expectedType) {
     if(typeof(skip_white) === 'undefined') { skip_white = true; }
@@ -265,11 +368,26 @@ OdataExpressionParser.prototype.tokenize = function(filter) {
     return tokens.reverse();
 };
 
-
-var MongooseVisitor = function(query) {
-    this.query = query;
+// will build a mongoose query object in the query property.
+var MongooseVisitor = function() {
+    this.query = {};
+    this.curBoolConditions = null;
 };
-// OData doesn't have an 'in' method but we're not supporting or so...
+MongooseVisitor.prototype.condition = function(cond) {
+    if(this.curBoolConditions) {
+        this.curBoolConditions.push(cond);
+    } else {
+        this.query = cond;
+    }
+};
+MongooseVisitor.prototype.simpleCondition = function(op,prop,value) {
+    var c = {},
+        match = {};
+    match[op] = value;
+    c[prop] = match;
+    this.condition(c);
+};
+// OData doesn't have an 'in' method but it's useful...
 // in(<property>,<literal>,<literal>...)
 MongooseVisitor.prototype.in = function(method) {
     var args = method.getArguments(),
@@ -277,7 +395,7 @@ MongooseVisitor.prototype.in = function(method) {
         in_args = args.slice(1).map(function(arg) {
             return arg.getValue();
         });
-    this.query.where(prop).in(in_args);
+    this.simpleCondition('$in',prop,in_args);
 };
 MongooseVisitor.prototype.notin = function(method) {
     var args = method.getArguments(),
@@ -285,7 +403,7 @@ MongooseVisitor.prototype.notin = function(method) {
         in_args = args.slice(1).map(function(arg) {
             return arg.getValue();
         });
-    this.query.where(prop).nin(in_args);
+    this.simpleCondition('$nin',prop,in_args);
 };
 MongooseVisitor.prototype.regexEscape = function(str) {
     return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
@@ -294,53 +412,91 @@ MongooseVisitor.prototype.startswith = function(method) {
     var args = method.getArguments(),
         prop = args[0].getPropertyName(),
         val = args[1].getValue();
-    this.query.where(prop).equals(new RegExp('^'+this.regexEscape(val)));
+    this.simpleCondition('$regex',prop,new RegExp('^'+this.regexEscape(val)));
 };
 MongooseVisitor.prototype.endswith = function(method) {
     var args = method.getArguments(),
         prop = args[0].getPropertyName(),
         val = args[1].getValue();
-    this.query.where(prop).equals(new RegExp(this.regexEscape(val)+'$'));
+    this.simpleCondition('$regex',prop,new RegExp(this.regexEscape(val)+'$'));
 };
 MongooseVisitor.prototype.contains = function(method) {
     var args = method.getArguments(),
         prop = args[0].getPropertyName(),
         val = args[1].getValue();
-    this.query.where(prop).equals(new RegExp(this.regexEscape(val)));
+    this.simpleCondition('$regex',prop,new RegExp(this.regexEscape(val)));
 };
 
 MongooseVisitor.prototype.eq = function(expr) {
-    this.query.where(expr.getLHS().getPropertyName()).equals(expr.getRHS().getValue());
+    this.simpleCondition('$eq',expr.getLHS().getPropertyName(),expr.getRHS().getValue());
 };
 MongooseVisitor.prototype.ne = function(expr) {
-    this.query.where(expr.getLHS().getPropertyName()).ne(expr.getRHS().getValue());
+    this.simpleCondition('$ne',expr.getLHS().getPropertyName(),expr.getRHS().getValue());
 };
 
 MongooseVisitor.prototype.gt = function(expr) {
-    this.query.where(expr.getLHS().getPropertyName()).gt(expr.getRHS().getValue());
+    this.simpleCondition('$gt',expr.getLHS().getPropertyName(),expr.getRHS().getValue());
 };
 MongooseVisitor.prototype.lt = function(expr) {
-    this.query.where(expr.getLHS().getPropertyName()).lt(expr.getRHS().getValue());
+    this.simpleCondition('$lt',expr.getLHS().getPropertyName(),expr.getRHS().getValue());
 };
 
 MongooseVisitor.prototype.ge = function(expr) {
-    this.query.where(expr.getLHS().getPropertyName()).gte(expr.getRHS().getValue());
+    this.simpleCondition('$gte',expr.getLHS().getPropertyName(),expr.getRHS().getValue());
 };
 MongooseVisitor.prototype.le = function(expr) {
-    this.query.where(expr.getLHS().getPropertyName()).lte(expr.getRHS().getValue());
+    this.simpleCondition('$lte',expr.getLHS().getPropertyName(),expr.getRHS().getValue());
 };
 
-MongooseVisitor.prototype.and = function(binary) {}; // initially not supporting or so and is just a formality
+MongooseVisitor.prototype.logical = function(op,binary) {
+    var self = this,
+        conditions = [],
+        c = {};
+    c[op] = conditions;
+    self.condition(c);
+    var prevBoolConditions = self.curBoolConditions;
+    self.curBoolConditions = conditions;
+    binary.sub_expressions.forEach(function(expr) {
+        expr.visit(self);
+    });
+    self.curBoolConditions = prevBoolConditions;
+};
+MongooseVisitor.prototype.and = function(binary) {
+    this.logical('$and',binary);
+};
+MongooseVisitor.prototype.or = function(binary) {
+    this.logical('$or',binary);
+};
 MongooseVisitor.prototype.string_lit = function(lit) {};
 MongooseVisitor.prototype.number_lit = function(lit) {};
 MongooseVisitor.prototype.boolean_lit = function(lit) {};
 MongooseVisitor.prototype.property = function(prop) {};
 
 module.exports = function(query,filter) {
-    (new OdataExpressionParser()).parse(filter).visit(new MongooseVisitor(query));
+    var visitor = new MongooseVisitor();
+    (new OdataExpressionParser()).parse(filter).visit(visitor);
+    //console.log('Query',JSON.stringify(visitor.query,null,'  '));
+    query.where(visitor.query);
 };
+
 /*
 var visitor = new MongooseVisitor(),
     parser = new OdataExpressionParser(),
-    bce = parser.parse('name eq \'Bob\' and stars ne 2');
-bce.visit(visitor);*/
+    filter = `(name eq 'Bob' or (name eq 'Fred' and age eq 10 and (startswith(foo,'bar') or this eq 2))) and stars ne 2`,
+    stringify = function(o) {
+        console.log(JSON.stringify(o,null,'  '));
+    };
+
+filter='in(x,1,2,3) and name eq \'foo\'';
+filter=`((type eq 'project' and deliverable eq 'map') or (type eq 'product' and type eq 'map')) and category eq 'foo'`;
+filter=`name eq 'foo' or name eq 'bar'`;
+filter=`(name eq 'foo' and age gt 10) or (name eq 'bar' and age gt 20)`
+filter=`name eq 'foo'`
+
+bce = parser.parse(filter);
+console.log(`-----BCE---- "${filter}"`);
+stringify(bce);
+bce.visit(visitor);
+console.log(`-----Mongo Query---- "${filter}"`);
+console.log(JSON.stringify(visitor.query,null,'  '));
+*/
