@@ -17,20 +17,27 @@ describe('Filter',function(){
         theBooks = [{
             title: 'B: Exciting Book',
             genre: 'Action',
-            pages: 10
+            pages: 10,
+            release: new Date(2018,0,1)
         },{
             title: 'A: Depressing Book',
             genre: 'Drama',
-            pages: 200
+            pages: 200,
+            release: new Date(2017,0,1)
         },{
             title: 'C: Another Book',
             genre: 'Action',
-            pages: 15
+            pages: 15,
+            release: new Date(2016,0,1)
         },{
             title: 'D: Dragons',
             genre: 'Fantasy',
-            pages: 120
-        }];
+            pages: 120,
+            release: new Date(2015,0,1)
+        }],
+        dateString = function(d) { // dates stored in local tz with offset so can't just use hardcoded strings
+            return JSON.stringify(d).replace(/"/g,'');
+        };
 
     before(function(done){
         util.before(function(){
@@ -304,6 +311,58 @@ describe('Filter',function(){
                 res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(2);
                 util.testBook(res.body.list[0],theBooks[1],authorOne);
                 util.testBook(res.body.list[1],theBooks[0],authorOne);
+                done();
+           });
+    });
+
+    it('date-eq',function(done){
+        var d = dateString(new Date(2018,0,1));
+        api.get(`/api/books?$filter=release eq ${d}`)
+           .expect(200)
+           .expect('Content-Type', /json/)
+           .end(function(err,res) {
+                if(err) {
+                    return done(err);
+                }
+                res.body.should.be.instanceof(Object);
+                res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(1);
+                util.testBook(res.body.list[0],theBooks[0],authorOne);
+                done();
+           });
+    });
+
+    it('date-inc',function(done){
+        var d1 = dateString(new Date(2015,0,1)),
+            d2 = dateString(new Date(2018,0,1));
+        api.get(`/api/books?$filter=release gt ${d1} and release lt ${d2}&orderby=title`)
+           .expect(200)
+           .expect('Content-Type', /json/)
+           .end(function(err,res) {
+                if(err) {
+                    return done(err);
+                }
+                res.body.should.be.instanceof(Object);
+                res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(2);
+                util.testBook(res.body.list[0],theBooks[1],authorOne);
+                util.testBook(res.body.list[1],theBooks[2],authorTwo);
+                done();
+           });
+    });
+
+    it('date-ge-ordered',function(done){
+        var d = dateString(new Date(2016,0,1));
+        api.get(`/api/books?$filter=release ge ${d}&$orderby=release asc`)
+           .expect(200)
+           .expect('Content-Type', /json/)
+           .end(function(err,res) {
+                if(err) {
+                    return done(err);
+                }
+                res.body.should.be.instanceof(Object);
+                res.body.should.have.property('list').and.be.instanceof(Array).with.lengthOf(3);
+                util.testBook(res.body.list[0],theBooks[2],authorTwo);
+                util.testBook(res.body.list[1],theBooks[1],authorOne);
+                util.testBook(res.body.list[2],theBooks[0],authorOne);
                 done();
            });
     });

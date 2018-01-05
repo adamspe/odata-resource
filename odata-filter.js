@@ -42,6 +42,11 @@ var OdataStringLiteral = function(value) {
 }
 OdataStringLiteral.prototype = new OdataLiteral();
 
+var OdataDateLiteral = function(value) {
+    OdataLiteral.apply(this,[value,'date_lit']);
+}
+OdataDateLiteral.prototype = new OdataLiteral();
+
 var OdataNumberLiteral = function(value) {
     OdataLiteral.apply(this,[value,'number_lit']);
 }
@@ -87,11 +92,13 @@ var WHITESPACE = 0,
     OPEN_PAREN = 4,
     CLOSE_PAREN = 5,
     SYMBOL = 6,
+    DATE = 7,
     COMPARISONS = ['eq','ne','lt','le','gt','ge'],
     LOGICALS = ['and','or'],
     METHODS = ['contains','startswith','endswith','in','notin'],
     IS_ALPHA_NUM = /^[a-z0-9_]+$/i, // added _ since it's common to prefix mongo properties with _
-    IS_NUM = /^[0-9]+$/;
+    IS_NUM = /^[0-9]+$/
+    IS_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 var OdataExpressionParser = function() {
 };
@@ -273,6 +280,8 @@ OdataExpressionParser.prototype.castSimple = function(token) {
                 return new OdataStringLiteral(null);
             }
             return new OdataProperty(token.token);
+        case DATE:
+            return new OdataDateLiteral(new Date(token.token));
         default:
             throw 'Unexpected token '+ token.token + ' (expected simple).';
     }
@@ -294,12 +303,12 @@ OdataExpressionParser.prototype.readDigits = function(val,start) {
     }
     return end;
 };
-OdataExpressionParser.prototype.readWord = function(val,start) {
+OdataExpressionParser.prototype.readWord = function(val,start,other_valid) {
     var end = start,
         len = val.length,c;
     while(end < len) {
         c = val.charAt(end);
-        if(IS_ALPHA_NUM.test(c) || c === '/' || c === '_' || c === '.' || c === '*') {
+        if(IS_ALPHA_NUM.test(c) || c === '/' || c === '_' || c === '.' || c === '*' || c === '-' || c === ':') {
             end++;
         } else {
             break;
@@ -310,8 +319,8 @@ OdataExpressionParser.prototype.readWord = function(val,start) {
 OdataExpressionParser.prototype.readQuotedString = function(val,start) {
     var end = start,
         len = val.length;
-    while(val.charAt(end) != '\'' || (end < (len-1) && val.charAt(end+1) == '\'')) {
-        end += val.charAt(end) != '\'' ? 1 : 2;
+    while(val.charAt(end) !== '\'' || (end < (len-1) && val.charAt(end+1) === '\'')) {
+        end += val.charAt(end) !== '\'' ? 1 : 2;
         if(end > len) {
             throw 'Encountered unterminated quoted string in filter \''+val+'\'';
         }
@@ -330,7 +339,7 @@ OdataExpressionParser.prototype.tokenize = function(filter) {
     var tokens = [],
         len = filter.length,
         current = 0,
-        end = 0,c;
+        end = 0,c,w;
     while(true) {
         if(current >= len) {
             break;
@@ -345,9 +354,17 @@ OdataExpressionParser.prototype.tokenize = function(filter) {
             tokens.push({type: QUOTED_STRING,token: filter.substr((current+1),(end-current)-1)});
             current = end+1;
         } else if (IS_NUM.test(c)) {
-            end = this.readDigits(filter,current);
-            tokens.push({type: NUMBER, token:parseInt(filter.substr(current,(end-current)))});
-            current = end;
+            // a date starts with a number, test if this is a date
+            end = this.readWord(filter,current);
+            w = filter.substr(current,(end-current))
+            if(IS_DATE.test(w)) {
+                tokens.push({type: DATE, token: w});
+                current = end;
+            } else { // just a number
+                end = this.readDigits(filter,current);
+                tokens.push({type: NUMBER, token:parseInt(filter.substr(current,(end-current)))});
+                current = end;
+            }
         } else if(IS_ALPHA_NUM.test(c) || c === '*') {
             end = this.readWord(filter,current);
             tokens.push({type: WORD,token:filter.substr(current,(end-current))});
@@ -362,6 +379,9 @@ OdataExpressionParser.prototype.tokenize = function(filter) {
             tokens.push({type: SYMBOL, token: c});
             current++;
         } else {
+            for(var i = tokens.length-1; i >= 0; i--) {
+                console.log(`token[${i}]`,tokens[i]);
+            }
             throw 'Unexpected character \''+c+'\' when parsing filter \''+filter+'\'';
         }
     }
@@ -468,6 +488,7 @@ MongooseVisitor.prototype.or = function(binary) {
     this.logical('$or',binary);
 };
 MongooseVisitor.prototype.string_lit = function(lit) {};
+MongooseVisitor.prototype.date_lit = function(lit) {};
 MongooseVisitor.prototype.number_lit = function(lit) {};
 MongooseVisitor.prototype.boolean_lit = function(lit) {};
 MongooseVisitor.prototype.property = function(prop) {};
@@ -475,7 +496,6 @@ MongooseVisitor.prototype.property = function(prop) {};
 module.exports = function(query,filter) {
     var visitor = new MongooseVisitor();
     (new OdataExpressionParser()).parse(filter).visit(visitor);
-    //console.log('Query',JSON.stringify(visitor.query,null,'  '));
     query.where(visitor.query);
 };
 
@@ -492,11 +512,12 @@ filter=`((type eq 'project' and deliverable eq 'map') or (type eq 'product' and 
 filter=`name eq 'foo' or name eq 'bar'`;
 filter=`(name eq 'foo' and age gt 10) or (name eq 'bar' and age gt 20)`
 filter=`name eq 'foo'`
+filter=`date eq 2014-06-23T03:30:00.000Z`
 
 bce = parser.parse(filter);
 console.log(`-----BCE---- "${filter}"`);
 stringify(bce);
 bce.visit(visitor);
 console.log(`-----Mongo Query---- "${filter}"`);
-console.log(JSON.stringify(visitor.query,null,'  '));
+stringify(visitor.query);
 */

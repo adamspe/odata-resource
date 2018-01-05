@@ -10,7 +10,8 @@ module.exports = {
         title: { type: String, required: true, trim: true },
         _author: {type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Author'},
         genre: { type: String, required: true, trim: true },
-        pages: { type: Number, required: false, min: 1 }
+        pages: { type: Number, required: false, min: 1 },
+        release: { type: Date, required: false }
     }),
     Review: mongoose.model('Review',{
         _book: {type: mongoose.Schema.Types.ObjectId, required: true},

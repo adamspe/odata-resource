@@ -279,3 +279,5 @@ Requires that `mongod` be running on the default port.
 # New in 1.0
 
 The `or` operator has been implemented for the `$filter` parameter and the use of parenthesis for grouping within `$filter`.
+
+Filtering by date is now supported.  E.g. `$filter=date lt 2018-01-01T00:00:00.000Z`
