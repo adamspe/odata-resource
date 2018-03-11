@@ -57,14 +57,19 @@ var Resource = function(definition) {
  * @param  {Number} rc      The response status code (default 500).
  * @param  {String} message The response message.
  * @param  {Object} err     The error object.
+* @param  {Function} [next] Optional next callback to invoke after the response is sent with the error object.
  */
-Resource.sendError = function(res,rc,message,err) {
+Resource.sendError = function(res,rc,message,err,next) {
     rc = rc||500;
-    res.status(rc).send({
+    var response = {
         status: rc,
         message: message,
         err: err
-    });
+    };
+    res.status(rc).send(response);
+    if(typeof(next) === 'function') {
+        next(err||response);
+    }
 };
 /**
  * @return {Object} The resource definition.
@@ -105,7 +110,7 @@ Resource.prototype.getStaticLinkNames = function() {
  * @param  {Object}   res        The express response object.
  * @param  {Array}   objs        The array of objects to send.
  * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
- * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
 Resource.prototype.singleResponse = function(req,res,obj,postMapper,next) {
     var response = this.getMapper(postMapper)(obj);
@@ -175,7 +180,7 @@ Resource.prototype._findListResponse = function(req,res,objs,postMapper,next) {
  * @param  {Object}   res        The express response object.
  * @param  {Array}   objs        The array of objects to send.
  * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
- * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
 Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
     var rel = this.getRel(),
@@ -199,7 +204,7 @@ Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
  * @param  {Object}   res        The express response object.
  * @param  {Array}   objs        The array of objects to send.
  * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
- * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
 Resource.prototype.relListResponse = function(req,res,objs,postMapper,next) {
     var rel = this.getRel(),
@@ -349,8 +354,9 @@ Resource.prototype.getMapper = function(postMapper) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.findById = function(req,res) {
+Resource.prototype.findById = function(req,res,next) {
     var self = this,
         def = this.getDefinition();
         query = this.initQuery(self.getModel().findById(req._resourceId),req);
@@ -358,7 +364,7 @@ Resource.prototype.findById = function(req,res) {
         if(err || !obj) {
             Resource.sendError(res,404,'not found',err);
         } else {
-            self.singleResponse(req,res,obj);
+            self.singleResponse(req,res,obj,null,next);
         }
     });
 };
@@ -368,8 +374,9 @@ Resource.prototype.findById = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.find = function(req,res) {
+Resource.prototype.find = function(req,res,next) {
     var self = this,
         def = this.getDefinition(),
         query = this.initQuery(self.getModel().find(),req);
@@ -378,7 +385,7 @@ Resource.prototype.find = function(req,res) {
             Resource.sendError(res,500,'find failed',err);
         } else {
             debug('found %d objects.', objs.length);
-            self._findListResponse(req,res,objs);
+            self._findListResponse(req,res,objs,null,next);
         }
     });
 };
@@ -407,19 +414,20 @@ Resource.prototype.count = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.create = function(req,res) {
+Resource.prototype.create = function(req,res,next) {
     var self = this,
         Model = self.getModel(),
         instance = new Model(req.body);
     instance.save(function(err,saved){
         if(err) {
-            return Resource.sendError(res,500,'create failure',err);
+            return Resource.sendError(res,500,'create failure',err,next);
         }
         // self.singleResponse(req,res,saved);
         // re-fetch the object so that nested attributes are properly populated.
         req._resourceId = saved._id;
-        self.findById(req,res);
+        self.findById(req,res,next);
     });
 };
 /**
@@ -432,24 +440,25 @@ Resource.prototype.create = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.update = function(req,res) {
+Resource.prototype.update = function(req,res,next) {
     var self = this,
         model = self.getModel();
     // not using findOneAndUpdate because helpers are not applied
     model.findOne({_id: req._resourceId},function(err,obj){
         if(err) {
-            return Resource.sendError(res,404,'not found',err);
+            return Resource.sendError(res,404,'not found',err,next);
         }
         Object.keys(req.body).forEach(function(key){
             obj[key] = req.body[key];
         });
         obj.save(function(err,obj) {
             if(err) {
-                return Resource.sendError(res,500,'update failure',err);
+                return Resource.sendError(res,500,'update failure',err,next);
             }
             // re-fetch the object so that nested attributes are properly populated.
-            self.findById(req,res);
+            self.findById(req,res,next);
         });
     });
 };
@@ -458,20 +467,24 @@ Resource.prototype.update = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after successful delete with the model object.
  */
-Resource.prototype.delete = function(req,res) {
+Resource.prototype.delete = function(req,res,next) {
     var self = this,
         query = self.initQuery(self.getModel().findById(req._resourceId),req);
     query.lean(false); // need the object itself regardless of how the resource is defined
     query.exec(function(err,obj){
         if(err || !obj) {
-            return Resource.sendError(res,404,'not found',err);
+            return Resource.sendError(res,404,'not found',err,next);
         }
         obj.remove(function(err,obj){
             if(err) {
-                return Resource.sendError(res,500,'remove error');
+                return Resource.sendError(res,500,'remove error',err,next);
             }
             res.status(200).send();
+            if(typeof(next) === 'function') {
+                next(null,obj);
+            }
         });
     });
 };
