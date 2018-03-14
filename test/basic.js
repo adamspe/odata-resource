@@ -279,5 +279,35 @@ describe('Basic Read',function(){
                     return done();
                 });
         });
+
+        it('single $expand',function(done) {
+            api.get('/api/reviews/'+theReviews[0]._id+'?$expand=_book')
+                .expect(200)
+                .expect('Content-Type',/json/)
+                .end(function(err,res) {
+                    if(err) {
+                        return done(err);
+                    }
+                    res.body.should.be.instanceof(Object);
+                    res.body.should.have.property('_book').and.be.instanceof(Object);
+                    util.testBook(res.body._book,theBooks[0],theAuthor,true/*no _links*/,true/*author not expanded*/);
+                    done();
+                });
+        });
+
+        it('nested $expand',function(done) {
+            api.get('/api/reviews/'+theReviews[0]._id+'?$expand=_book._author')
+                .expect(200)
+                .expect('Content-Type',/json/)
+                .end(function(err,res) {
+                    if(err) {
+                        return done(err);
+                    }
+                    res.body.should.be.instanceof(Object);
+                    res.body.should.have.property('_book').and.be.instanceof(Object);
+                    util.testBook(res.body._book,theBooks[0],theAuthor,true/*no _links*/);
+                    done();
+                });
+        });
     });
 });

@@ -14,7 +14,7 @@ module.exports = {
         release: { type: Date, required: false }
     }),
     Review: mongoose.model('Review',{
-        _book: {type: mongoose.Schema.Types.ObjectId, required: true},
+        _book: {type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Book'},
         content: { type: String, required: true, trim: true },
         stars: { type: Number, required: true, min: 1, max: 5 },
         updated: { type: Date, default: Date.now }

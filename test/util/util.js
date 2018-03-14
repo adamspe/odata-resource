@@ -43,21 +43,27 @@ var util = {
         links.should.have.property('books','/api/authors/'+expect._id+'/books');
         links.should.not.have.property('count');
     },
-    testBook: function(book,expect,expectAuthor) {
+    testBook: function(book,expect,expectAuthor,noLinks,unexpandedAuthor) {
         book.should.have.property('title',expect.title);
         book.should.have.property('genre',expect.genre);
         book.should.have.property('_id',expect._id);
-        book.should.have.property('_links').and.be.instanceof(Object);
-        var links = book._links;
-        links.should.have.property('self','/api/books/'+expect._id);
-        links.should.have.property('reviews','/api/books/'+expect._id+'/reviews');
-        book.should.have.property('_author').and.be.instanceof(Object);
+        if(!noLinks) {
+            book.should.have.property('_links').and.be.instanceof(Object);
+            var links = book._links;
+            links.should.have.property('self','/api/books/'+expect._id);
+            links.should.have.property('reviews','/api/books/'+expect._id+'/reviews');
+            book.should.have.property('_author').and.be.instanceof(Object);
+        }
         // TODO add links to populated attributes?
         //testAuthor(book._author,expectAuthor);
         var author = book._author;
-        author.should.have.property('firstname',expectAuthor.firstname);
-        author.should.have.property('lastname',expectAuthor.lastname);
-        author.should.have.property('_id',expectAuthor._id);
+        if(unexpandedAuthor) {
+            author.should.be.instanceof(String).and.equal(expectAuthor._id);
+        } else {
+            author.should.have.property('firstname',expectAuthor.firstname);
+            author.should.have.property('lastname',expectAuthor.lastname);
+            author.should.have.property('_id',expectAuthor._id);
+        }
     },
     testReview: function(review,expect) {
         review.should.have.property('content',expect.content);

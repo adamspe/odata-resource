@@ -31,7 +31,7 @@ var authors = new Resource({
         rel: '/api/books',
         model: models.Book,
         $orderby: 'title',
-        populate: '_author',
+        $expand: '_author',
         count: true
     }).instanceLink('reviews',{
         otherSide: reviews,

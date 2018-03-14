@@ -32,6 +32,7 @@ declare class Resource<DocType extends Document> {
     initRouter(app:any):Router;
 
     static sendError(res:Response,rc:number,message:string,err?:any):void;
+    static parseFilter(query:DocumentQuery<any,any>,filter:string):void;
 }
 
 declare namespace Resource {

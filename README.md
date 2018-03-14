@@ -7,7 +7,7 @@ See the [Home Page](https://adamspe.github.io/odata-resource/) for the contents 
 
 Node.Js module to allow for creation of REST resources served up via [ExpressJS](expressjs.com) and persisting data via [Mongoose](mongoosejs.com) that:
 
-- Supports [OData](http://www.odata.org/) query arguments like; `$filter`, `$orderby`, `$select`, `$top` and `$skip`.
+- Supports [OData](http://www.odata.org/) query arguments like; `$filter`, `$orderby`, `$select`, `$expand`, `$top` and `$skip`.
 - Supports simple, resource definitions requiring minimal code.
 - Supports static and instance based relationships between entities.
 - Allows for Mongoose models to be defined and used independent of the resource implementation.
@@ -281,3 +281,29 @@ Requires that `mongod` be running on the default port.
 The `or` operator has been implemented for the `$filter` parameter and the use of parenthesis for grouping within `$filter`.
 
 Filtering by date is now supported.  E.g. `$filter=date lt 2018-01-01T00:00:00.000Z`
+
+# New in 1.1
+
+A basic `index.d.ts` has been added so that Resource can be used better from Typescript projects.
+
+E.g.
+```
+import Resource = require('odata-resource');
+import { Request, Response } from 'express';
+
+class MyResource extends Resource<MyDoc> {
+    find(req:Request,res:Response) {
+        return this.find(req,res);
+    }
+}
+```
+
+# New in 1.2
+
+Added support for the `$expand` query argument.
+
+Nested expansion is supported.  E.g. <code>$expand=_book._author</code> will end up in both the <code>_book</code> reference being expanded and its <code>_author</code> reference being expanded.
+
+With this change the previous `populate` definition property has been deprecated.  The new `$expand` property should be used and, like other resource definition properties plays the role of the default value for the `$expand` query argument.  The `$expand` resource definition property can be a string, object or array of strings and/or objects to pass to mongoose.
+
+**Important:** The corresponding Mongoose model <code>ObjectId</code> properties <strong>must</strong> have their <code>ref</code> properties set properly or expansion cannot work.

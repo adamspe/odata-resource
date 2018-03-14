@@ -17,7 +17,7 @@ var debug = require('debug')('Resource'),
  * <li>delete (boolean): Specifies if the resource should support delete (DELETE) (default true).</li>
  * <li>lean (boolean): Whether find[ById] queries should be 'lean' and return pojos (default true).  If false then
  *         resource instances, prior to mapping an object for return, could make use of methods on the instance model.</li>
- * <li>populate (string||Array): Specifies a property, or list of properties, to populate into objects.</li>
+ * <li>populate (string||Array): Specifies a property, or list of properties, to populate into objects (<strong>deprecated</strong> use <code>$expand</code>).</li>
  * <li>count (boolean): Specifies if the resource should support counts on find and when traversed to by standard relationships from other types (default: false).</li>
  * </ul>
  *
@@ -33,6 +33,12 @@ var debug = require('debug')('Resource'),
  *                     If a value is supplied then $select on the query string will be ignored to protect against the
  *                     situation where the intent is to hide internal attributes (e.g. '-secret').  Unlike odata the
  *                     syntax here is passed through to mongo so the '-' prefix will be honored.</li>
+ * <li>$expand (string|Array): Specifies a property or list of properties to populate into objects.  This value acts as the
+ *                    default value for the <code>$expand</code> URL argument.  If the URL argument is supplied it
+ *                    over-rides this value.  Nested expansion is supported.  E.g. <code>_book._author</code> will end up in
+ *                    both the <code>_book</code> reference being expanded and its <code>_author</code> reference being expanded.
+ *                    The corresponding Mongoose model <code>ObjectId</code> properties <strong>must</strong> have their
+ *                    <code>ref</code> properties set properly or expansion cannot work.</li>
  * </ul>
  *
  * @constructor
@@ -71,6 +77,13 @@ Resource.sendError = function(res,rc,message,err,next) {
         next(err||response);
     }
 };
+/**
+ * Parse a $filter populating a mongoose query with its cotents.
+ *
+ * @param {Object} A mongoose query.
+ * @param {String} A $filter value.
+ */
+Resource.parseFilter = filterParser;
 /**
  * @return {Object} The resource definition.
  */
@@ -271,12 +284,31 @@ function odataOrderBy($orderby) {
 Resource.prototype.initQuery = function(query,req) {
     var base = this.getDefinition(),
         def = _.extend({
-            $orderbyPaged: '_id'
+            $orderbyPaged: '_id',
+            $expand: base.populate // populate is deprecated, if set its the default for $expand
         },base,req.query),
-        populate = def.populate ?
-            (_.isArray(def.populate) ? def.populate : [def.populate]) : [];
+        populate = def.$expand ?
+            (_.isArray(def.$expand) ? def.$expand : [def.$expand]) : [];
     populate.forEach(function(att){
-        query.populate(att);
+        if(typeof(att) === 'string') {
+            att.split(',').forEach(function(a) {
+                a = a.trim();
+                // nested expand, needs to be turned into an object instructing
+                // which paths/nested paths to expand
+                if(a.indexOf('.') !== -1) {
+                    var parts = a.split('.'),
+                        pop = { path: parts[0] },cpop = pop,i;
+                    for(i = 1; i < parts.length; i++) {
+                        cpop.populate = { path: parts[i] };
+                        cpop = cpop.populate;
+                    }
+                    a = pop;
+                }
+                query.populate(a);
+            });
+        } else {
+            query.populate(att);
+        }
     });
     if(base.$select) {
         // don't let the caller over-ride to gain access to
