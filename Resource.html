@@ -28,9 +28,7 @@
 
 <header>
     
-        <h2>
-        Resource
-        </h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>Resource<span class="signature">(definition)</span><span class="type-signature"></span></h2>
         
     
 </header>
@@ -42,7 +40,9 @@
 
     
 
+    
     <h4 class="name" id="Resource"><span class="type-signature"></span>new Resource<span class="signature">(definition)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -61,7 +61,7 @@
 <li>delete (boolean): Specifies if the resource should support delete (DELETE) (default true).</li>
 <li>lean (boolean): Whether find[ById] queries should be 'lean' and return pojos (default true).  If false then
         resource instances, prior to mapping an object for return, could make use of methods on the instance model.</li>
-<li>populate (string||Array): Specifies a property, or list of properties, to populate into objects.</li>
+<li>populate (string||Array): Specifies a property, or list of properties, to populate into objects (<strong>deprecated</strong> use <code>$expand</code>).</li>
 <li>count (boolean): Specifies if the resource should support counts on find and when traversed to by standard relationships from other types (default: false).</li>
 </ul>
 
@@ -77,6 +77,12 @@
                     If a value is supplied then $select on the query string will be ignored to protect against the
                     situation where the intent is to hide internal attributes (e.g. '-secret').  Unlike odata the
                     syntax here is passed through to mongo so the '-' prefix will be honored.</li>
+<li>$expand (string|Array): Specifies a property or list of properties to populate into objects.  This value acts as the
+                   default value for the <code>$expand</code> URL argument.  If the URL argument is supplied it
+                   over-rides this value.  Nested expansion is supported.  E.g. <code>_book._author</code> will end up in
+                   both the <code>_book</code> reference being expanded and its <code>_author</code> reference being expanded.
+                   The corresponding Mongoose model <code>ObjectId</code> properties <strong>must</strong> have their
+                   <code>ref</code> properties set properly or expansion cannot work.</li>
 </ul>
 </div>
 
@@ -170,7 +176,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line41">line 41</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line47">line 47</a>
     </li></ul></dd>
     
 
@@ -196,6 +202,8 @@
 
 
 
+
+
     
     </div>
 
@@ -205,10 +213,78 @@
 
     
 
-     
+    
 
     
 
+    
+
+    
+        <h3 class="subsection-title">Members</h3>
+
+        
+            
+<h4 class="name" id=".parseFilter"><span class="type-signature">(static) </span>parseFilter<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    Parse a $filter populating a mongoose query with its cotents.
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line86">line 86</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
     
 
     
@@ -219,7 +295,9 @@
 
     
 
-    <h4 class="name" id=".sendError"><span class="type-signature">(static) </span>sendError<span class="signature">(res, rc, message, err)</span><span class="type-signature"></span></h4>
+    
+    <h4 class="name" id=".sendError"><span class="type-signature">(static) </span>sendError<span class="signature">(res, rc, message, err, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -250,6 +328,8 @@
         <th>Type</th>
 
         
+        <th>Attributes</th>
+        
 
         
 
@@ -275,6 +355,14 @@
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
@@ -297,6 +385,14 @@
             
             </td>
 
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
             
 
             
@@ -321,6 +417,14 @@
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
@@ -344,10 +448,51 @@
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
             <td class="description last">The error object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>next</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional next callback to invoke after the response is sent with the error object.</td>
         </tr>
 
     
@@ -388,7 +533,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line61">line 61</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line68">line 68</a>
     </li></ul></dd>
     
 
@@ -423,12 +568,16 @@ a potential security vulnerability.</li>
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="count"><span class="type-signature"></span>count<span class="signature">(req, res)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -552,7 +701,7 @@ Resources may override this default functionality.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line392">line 392</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line431">line 431</a>
     </li></ul></dd>
     
 
@@ -578,12 +727,16 @@ Resources may override this default functionality.
 
 
 
+
+
         
             
 
     
 
-    <h4 class="name" id="create"><span class="type-signature"></span>create<span class="signature">(req, res)</span><span class="type-signature"></span></h4>
+    
+    <h4 class="name" id="create"><span class="type-signature"></span>create<span class="signature">(req, res, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -615,6 +768,8 @@ object to the client.
         <th>Type</th>
 
         
+        <th>Attributes</th>
+        
 
         
 
@@ -640,6 +795,14 @@ object to the client.
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
@@ -663,10 +826,470 @@ object to the client.
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
             <td class="description last">The express response object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>next</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional next callback to invoke after the response is sent with the response object.</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line451">line 451</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="delete"><span class="type-signature"></span>delete<span class="signature">(req, res, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Deletes an instance of this entity type.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>req</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">The express request object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>res</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">The express response object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>next</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional next callback to invoke after successful delete with the model object.</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line504">line 504</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="find"><span class="type-signature"></span>find<span class="signature">(req, res, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Executes a query for an entity type and returns the response to the client.
+Resources may override this default functionality.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>req</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">The express request object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>res</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">The express response object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>next</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional next callback to invoke after the response is sent with the response object.</td>
         </tr>
 
     
@@ -733,158 +1356,6 @@ object to the client.
 
 
 
-        
-            
-
-    
-
-    <h4 class="name" id="delete"><span class="type-signature"></span>delete<span class="signature">(req, res)</span><span class="type-signature"></span></h4>
-
-    
-
-
-
-<div class="description">
-    Deletes an instance of this entity type.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>req</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">The express request object.</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>res</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">The express response object.</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line462">line 462</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
         
@@ -892,162 +1363,9 @@ object to the client.
 
     
 
-    <h4 class="name" id="find"><span class="type-signature"></span>find<span class="signature">(req, res)</span><span class="type-signature"></span></h4>
-
     
-
-
-
-<div class="description">
-    Executes a query for an entity type and returns the response to the client.
-Resources may override this default functionality.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
+    <h4 class="name" id="findById"><span class="type-signature"></span>findById<span class="signature">(req, res, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
     
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>req</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">The express request object.</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>res</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">The express response object.</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line372">line 372</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    <h4 class="name" id="findById"><span class="type-signature"></span>findById<span class="signature">(req, res)</span><span class="type-signature"></span></h4>
 
     
 
@@ -1079,6 +1397,8 @@ override this default functionality.
         <th>Type</th>
 
         
+        <th>Attributes</th>
+        
 
         
 
@@ -1104,6 +1424,14 @@ override this default functionality.
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
@@ -1127,10 +1455,51 @@ override this default functionality.
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
             <td class="description last">The express response object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>next</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional next callback to invoke after the response is sent with the response object.</td>
         </tr>
 
     
@@ -1171,7 +1540,7 @@ override this default functionality.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line353">line 353</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line391">line 391</a>
     </li></ul></dd>
     
 
@@ -1197,112 +1566,16 @@ override this default functionality.
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="getDefinition"><span class="type-signature"></span>getDefinition<span class="signature">()</span><span class="type-signature"> &rarr; {Object}</span></h4>
-
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line72">line 72</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    The resource definition.
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Object</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-        
-            
-
-    
-
-    <h4 class="name" id="getInstanceLinkNames"><span class="type-signature"></span>getInstanceLinkNames<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
 
     
 
@@ -1376,6 +1649,110 @@ override this default functionality.
 
         
 <div class="param-desc">
+    The resource definition.
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="getInstanceLinkNames"><span class="type-signature"></span>getInstanceLinkNames<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line108">line 108</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
     The list of instance link names.
 </div>
 
@@ -1397,12 +1774,16 @@ override this default functionality.
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="getMapper"><span class="type-signature"></span>getMapper<span class="signature">(postMapper)</span><span class="type-signature"> &rarr; {function}</span></h4>
+    
 
     
 
@@ -1508,7 +1889,7 @@ so and those functions implicitly use a mapper.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line323">line 323</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line360">line 360</a>
     </li></ul></dd>
     
 
@@ -1556,12 +1937,16 @@ so and those functions implicitly use a mapper.</p>
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="getModel"><span class="type-signature"></span>getModel<span class="signature">()</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    
 
     
 
@@ -1608,7 +1993,7 @@ so and those functions implicitly use a mapper.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line84">line 84</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line102">line 102</a>
     </li></ul></dd>
     
 
@@ -1656,12 +2041,16 @@ so and those functions implicitly use a mapper.</p>
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="getRel"><span class="type-signature"></span>getRel<span class="signature">()</span><span class="type-signature"> &rarr; {String}</span></h4>
+    
 
     
 
@@ -1708,7 +2097,7 @@ so and those functions implicitly use a mapper.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line78">line 78</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line96">line 96</a>
     </li></ul></dd>
     
 
@@ -1756,12 +2145,16 @@ so and those functions implicitly use a mapper.</p>
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="getStaticLinkNames"><span class="type-signature"></span>getStaticLinkNames<span class="signature">()</span><span class="type-signature"> &rarr; {Array}</span></h4>
+    
 
     
 
@@ -1808,7 +2201,7 @@ so and those functions implicitly use a mapper.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line97">line 97</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line115">line 115</a>
     </li></ul></dd>
     
 
@@ -1856,12 +2249,16 @@ so and those functions implicitly use a mapper.</p>
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="initQuery"><span class="type-signature"></span>initQuery<span class="signature">(query, req)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    
 
     
 
@@ -1984,7 +2381,7 @@ so and those functions implicitly use a mapper.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line266">line 266</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line284">line 284</a>
     </li></ul></dd>
     
 
@@ -2032,12 +2429,16 @@ so and those functions implicitly use a mapper.</p>
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="initRouter"><span class="type-signature"></span>initRouter<span class="signature">(app)</span><span class="type-signature"> &rarr; {object}</span></h4>
+    
 
     
 
@@ -2139,7 +2540,7 @@ resource's 'rel' to the router.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line532">line 532</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line577">line 577</a>
     </li></ul></dd>
     
 
@@ -2187,12 +2588,16 @@ resource's 'rel' to the router.
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="instanceLink"><span class="type-signature"></span>instanceLink<span class="signature">(rel, link)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    
 
     
 
@@ -2329,7 +2734,7 @@ If an object is supplied then the necessary keys are:
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line515">line 515</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line560">line 560</a>
     </li></ul></dd>
     
 
@@ -2377,12 +2782,16 @@ If an object is supplied then the necessary keys are:
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="listResponse"><span class="type-signature"></span>listResponse<span class="signature">(req, res, objs, postMapper<span class="signature-attributes">opt</span>, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -2579,7 +2988,7 @@ If an object is supplied then the necessary keys are:
 
             
 
-            <td class="description last">Optional next callback to invoe after the response is sent with the response object.</td>
+            <td class="description last">Optional next callback to invoke after the response is sent with the response object.</td>
         </tr>
 
     
@@ -2620,7 +3029,7 @@ If an object is supplied then the necessary keys are:
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line180">line 180</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line198">line 198</a>
     </li></ul></dd>
     
 
@@ -2646,12 +3055,16 @@ If an object is supplied then the necessary keys are:
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="relListResponse"><span class="type-signature"></span>relListResponse<span class="signature">(req, res, objs, postMapper<span class="signature-attributes">opt</span>, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -2849,7 +3262,7 @@ static count link to be handled.
 
             
 
-            <td class="description last">Optional next callback to invoe after the response is sent with the response object.</td>
+            <td class="description last">Optional next callback to invoke after the response is sent with the response object.</td>
         </tr>
 
     
@@ -2890,7 +3303,7 @@ static count link to be handled.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line204">line 204</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line222">line 222</a>
     </li></ul></dd>
     
 
@@ -2916,12 +3329,16 @@ static count link to be handled.
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="singleResponse"><span class="type-signature"></span>singleResponse<span class="signature">(req, res, objs, postMapper<span class="signature-attributes">opt</span>, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -3118,7 +3535,7 @@ static count link to be handled.
 
             
 
-            <td class="description last">Optional next callback to invoe after the response is sent with the response object.</td>
+            <td class="description last">Optional next callback to invoke after the response is sent with the response object.</td>
         </tr>
 
     
@@ -3159,7 +3576,7 @@ static count link to be handled.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line110">line 110</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line128">line 128</a>
     </li></ul></dd>
     
 
@@ -3185,12 +3602,16 @@ static count link to be handled.
 
 
 
+
+
         
             
 
     
 
+    
     <h4 class="name" id="staticLink"><span class="type-signature"></span>staticLink<span class="signature">(rel, link)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    
 
     
 
@@ -3315,7 +3736,7 @@ static count link to be handled.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line487">line 487</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line532">line 532</a>
     </li></ul></dd>
     
 
@@ -3363,12 +3784,16 @@ static count link to be handled.
 
 
 
+
+
         
             
 
     
 
-    <h4 class="name" id="update"><span class="type-signature"></span>update<span class="signature">(req, res)</span><span class="type-signature"></span></h4>
+    
+    <h4 class="name" id="update"><span class="type-signature"></span>update<span class="signature">(req, res, next<span class="signature-attributes">opt</span>)</span><span class="type-signature"></span></h4>
+    
 
     
 
@@ -3404,6 +3829,8 @@ input object and update only the keys found within that object.</p>
         <th>Type</th>
 
         
+        <th>Attributes</th>
+        
 
         
 
@@ -3429,6 +3856,14 @@ input object and update only the keys found within that object.</p>
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
@@ -3452,10 +3887,51 @@ input object and update only the keys found within that object.</p>
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
             <td class="description last">The express response object.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>next</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional next callback to invoke after the response is sent with the response object.</td>
         </tr>
 
     
@@ -3496,7 +3972,7 @@ input object and update only the keys found within that object.</p>
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="index.js.html">index.js</a>, <a href="index.js.html#line436">line 436</a>
+        <a href="index.js.html">index.js</a>, <a href="index.js.html#line477">line 477</a>
     </li></ul></dd>
     
 
@@ -3506,6 +3982,8 @@ input object and update only the keys found within that object.</p>
 
     
 </dl>
+
+
 
 
 
@@ -3544,7 +4022,7 @@ input object and update only the keys found within that object.</p>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.2</a> on Fri Jan 05 2018 12:11:09 GMT-0600 (CST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Mar 14 2018 10:28:17 GMT-0500 (CDT)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -45,7 +45,7 @@
  * &lt;li>delete (boolean): Specifies if the resource should support delete (DELETE) (default true).&lt;/li>
  * &lt;li>lean (boolean): Whether find[ById] queries should be 'lean' and return pojos (default true).  If false then
  *         resource instances, prior to mapping an object for return, could make use of methods on the instance model.&lt;/li>
- * &lt;li>populate (string||Array): Specifies a property, or list of properties, to populate into objects.&lt;/li>
+ * &lt;li>populate (string||Array): Specifies a property, or list of properties, to populate into objects (&lt;strong>deprecated&lt;/strong> use &lt;code>$expand&lt;/code>).&lt;/li>
  * &lt;li>count (boolean): Specifies if the resource should support counts on find and when traversed to by standard relationships from other types (default: false).&lt;/li>
  * &lt;/ul>
  *
@@ -61,6 +61,12 @@
  *                     If a value is supplied then $select on the query string will be ignored to protect against the
  *                     situation where the intent is to hide internal attributes (e.g. '-secret').  Unlike odata the
  *                     syntax here is passed through to mongo so the '-' prefix will be honored.&lt;/li>
+ * &lt;li>$expand (string|Array): Specifies a property or list of properties to populate into objects.  This value acts as the
+ *                    default value for the &lt;code>$expand&lt;/code> URL argument.  If the URL argument is supplied it
+ *                    over-rides this value.  Nested expansion is supported.  E.g. &lt;code>_book._author&lt;/code> will end up in
+ *                    both the &lt;code>_book&lt;/code> reference being expanded and its &lt;code>_author&lt;/code> reference being expanded.
+ *                    The corresponding Mongoose model &lt;code>ObjectId&lt;/code> properties &lt;strong>must&lt;/strong> have their
+ *                    &lt;code>ref&lt;/code> properties set properly or expansion cannot work.&lt;/li>
  * &lt;/ul>
  *
  * @constructor
@@ -85,15 +91,27 @@ var Resource = function(definition) {
  * @param  {Number} rc      The response status code (default 500).
  * @param  {String} message The response message.
  * @param  {Object} err     The error object.
+* @param  {Function} [next] Optional next callback to invoke after the response is sent with the error object.
  */
-Resource.sendError = function(res,rc,message,err) {
+Resource.sendError = function(res,rc,message,err,next) {
     rc = rc||500;
-    res.status(rc).send({
+    var response = {
         status: rc,
         message: message,
         err: err
-    });
+    };
+    res.status(rc).send(response);
+    if(typeof(next) === 'function') {
+        next(err||response);
+    }
 };
+/**
+ * Parse a $filter populating a mongoose query with its cotents.
+ *
+ * @param {Object} A mongoose query.
+ * @param {String} A $filter value.
+ */
+Resource.parseFilter = filterParser;
 /**
  * @return {Object} The resource definition.
  */
@@ -133,7 +151,7 @@ Resource.prototype.getStaticLinkNames = function() {
  * @param  {Object}   res        The express response object.
  * @param  {Array}   objs        The array of objects to send.
  * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
- * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
 Resource.prototype.singleResponse = function(req,res,obj,postMapper,next) {
     var response = this.getMapper(postMapper)(obj);
@@ -203,7 +221,7 @@ Resource.prototype._findListResponse = function(req,res,objs,postMapper,next) {
  * @param  {Object}   res        The express response object.
  * @param  {Array}   objs        The array of objects to send.
  * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
- * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
 Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
     var rel = this.getRel(),
@@ -227,7 +245,7 @@ Resource.prototype.listResponse = function(req,res,objs,postMapper,next) {
  * @param  {Object}   res        The express response object.
  * @param  {Array}   objs        The array of objects to send.
  * @param  {Function}   [postMapper] Optional Array.map callback that will be called with each raw object instance.
- * @param  {Function} [next]       Optional next callback to invoe after the response is sent with the response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
 Resource.prototype.relListResponse = function(req,res,objs,postMapper,next) {
     var rel = this.getRel(),
@@ -294,12 +312,31 @@ function odataOrderBy($orderby) {
 Resource.prototype.initQuery = function(query,req) {
     var base = this.getDefinition(),
         def = _.extend({
-            $orderbyPaged: '_id'
+            $orderbyPaged: '_id',
+            $expand: base.populate // populate is deprecated, if set its the default for $expand
         },base,req.query),
-        populate = def.populate ?
-            (_.isArray(def.populate) ? def.populate : [def.populate]) : [];
+        populate = def.$expand ?
+            (_.isArray(def.$expand) ? def.$expand : [def.$expand]) : [];
     populate.forEach(function(att){
-        query.populate(att);
+        if(typeof(att) === 'string') {
+            att.split(',').forEach(function(a) {
+                a = a.trim();
+                // nested expand, needs to be turned into an object instructing
+                // which paths/nested paths to expand
+                if(a.indexOf('.') !== -1) {
+                    var parts = a.split('.'),
+                        pop = { path: parts[0] },cpop = pop,i;
+                    for(i = 1; i &lt; parts.length; i++) {
+                        cpop.populate = { path: parts[i] };
+                        cpop = cpop.populate;
+                    }
+                    a = pop;
+                }
+                query.populate(a);
+            });
+        } else {
+            query.populate(att);
+        }
     });
     if(base.$select) {
         // don't let the caller over-ride to gain access to
@@ -377,8 +414,9 @@ Resource.prototype.getMapper = function(postMapper) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next]       Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.findById = function(req,res) {
+Resource.prototype.findById = function(req,res,next) {
     var self = this,
         def = this.getDefinition();
         query = this.initQuery(self.getModel().findById(req._resourceId),req);
@@ -386,7 +424,7 @@ Resource.prototype.findById = function(req,res) {
         if(err || !obj) {
             Resource.sendError(res,404,'not found',err);
         } else {
-            self.singleResponse(req,res,obj);
+            self.singleResponse(req,res,obj,null,next);
         }
     });
 };
@@ -396,8 +434,9 @@ Resource.prototype.findById = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.find = function(req,res) {
+Resource.prototype.find = function(req,res,next) {
     var self = this,
         def = this.getDefinition(),
         query = this.initQuery(self.getModel().find(),req);
@@ -406,7 +445,7 @@ Resource.prototype.find = function(req,res) {
             Resource.sendError(res,500,'find failed',err);
         } else {
             debug('found %d objects.', objs.length);
-            self._findListResponse(req,res,objs);
+            self._findListResponse(req,res,objs,null,next);
         }
     });
 };
@@ -435,19 +474,20 @@ Resource.prototype.count = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.create = function(req,res) {
+Resource.prototype.create = function(req,res,next) {
     var self = this,
         Model = self.getModel(),
         instance = new Model(req.body);
     instance.save(function(err,saved){
         if(err) {
-            return Resource.sendError(res,500,'create failure',err);
+            return Resource.sendError(res,500,'create failure',err,next);
         }
         // self.singleResponse(req,res,saved);
         // re-fetch the object so that nested attributes are properly populated.
         req._resourceId = saved._id;
-        self.findById(req,res);
+        self.findById(req,res,next);
     });
 };
 /**
@@ -460,24 +500,25 @@ Resource.prototype.create = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after the response is sent with the response object.
  */
-Resource.prototype.update = function(req,res) {
+Resource.prototype.update = function(req,res,next) {
     var self = this,
         model = self.getModel();
     // not using findOneAndUpdate because helpers are not applied
     model.findOne({_id: req._resourceId},function(err,obj){
         if(err) {
-            return Resource.sendError(res,404,'not found',err);
+            return Resource.sendError(res,404,'not found',err,next);
         }
         Object.keys(req.body).forEach(function(key){
             obj[key] = req.body[key];
         });
         obj.save(function(err,obj) {
             if(err) {
-                return Resource.sendError(res,500,'update failure',err);
+                return Resource.sendError(res,500,'update failure',err,next);
             }
             // re-fetch the object so that nested attributes are properly populated.
-            self.findById(req,res);
+            self.findById(req,res,next);
         });
     });
 };
@@ -486,20 +527,24 @@ Resource.prototype.update = function(req,res) {
  *
  * @param  {Object} req The express request object.
  * @param  {Object} res The express response object.
+ * @param  {Function} [next] Optional next callback to invoke after successful delete with the model object.
  */
-Resource.prototype.delete = function(req,res) {
+Resource.prototype.delete = function(req,res,next) {
     var self = this,
         query = self.initQuery(self.getModel().findById(req._resourceId),req);
     query.lean(false); // need the object itself regardless of how the resource is defined
     query.exec(function(err,obj){
         if(err || !obj) {
-            return Resource.sendError(res,404,'not found',err);
+            return Resource.sendError(res,404,'not found',err,next);
         }
         obj.remove(function(err,obj){
             if(err) {
-                return Resource.sendError(res,500,'remove error');
+                return Resource.sendError(res,500,'remove error',err,next);
             }
             res.status(200).send();
+            if(typeof(next) === 'function') {
+                next(null,obj);
+            }
         });
     });
 };
@@ -676,7 +721,7 @@ module.exports = Resource;
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.2</a> on Fri Jan 05 2018 12:11:09 GMT-0600 (CST)
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Wed Mar 14 2018 10:28:17 GMT-0500 (CDT)
 </footer>
 
 <script> prettyPrint(); </script>
