@@ -15,7 +15,7 @@ declare class Resource<DocType extends Document> {
     listResponse(req:Request,res:Response,objs:any[],postMapper?:Resource.POST_MAPPER,next?:Resource.NEXT):void;
     relListResponse(req:Request,res:Response,objs:any[],postMapper?:Resource.POST_MAPPER,next?:Resource.NEXT):void;
 
-    initQuery(query:DocumentQuery<DocType[],DocType>,req:Request):DocumentQuery<DocType[],DocType>;
+    initQuery(query:DocumentQuery<DocType[],DocType>|DocumentQuery<DocType,DocType>,req:Request):DocumentQuery<DocType[],DocType>|DocumentQuery<DocType,DocType>;
 
     getMapper(postMapper?:Resource.POST_MAPPER):Resource.POST_MAPPER;
 

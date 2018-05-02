@@ -1,6 +1,6 @@
 {
   "name": "odata-resource",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "REST + OData + Mongoose/MongoDb",
   "main": "index.js",
   "scripts": {
