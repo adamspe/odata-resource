@@ -4,7 +4,7 @@
   "description": "REST + OData + Mongoose/MongoDb",
   "main": "index.js",
   "scripts": {
-    "test": "make test"
+    "test": "nyc --reporter=html mocha --timeout 5000 test/*.js"
   },
   "repository": {
     "type": "git",
@@ -26,10 +26,12 @@
     "debug": ">=2.6.9"
   },
   "devDependencies": {
-    "express": ">=4.17.1",
     "body-parser": ">=1.19.0",
     "chai": "^3.3.0",
+    "express": ">=4.17.1",
+    "mocha": "^6.2.2",
     "mongoose": ">=5.7.5",
+    "nyc": "^15.0.0",
     "should": "^7.1.0",
     "supertest": ">=3.7.0"
   }
