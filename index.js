@@ -431,7 +431,7 @@ Resource.prototype.count = function(req,res) {
     var self = this,
         def = this.getDefinition(),
         query = this.initQuery(self.getModel().find(),req);
-    query.count(function(err,n){
+    query.countDocuments(function(err,n){
         if(err){
             Resource.sendError(res,500,'find failed',err);
         } else {
@@ -644,7 +644,7 @@ Resource.prototype.initRouter = function(app) {
                                 var criteria = {};
                                 criteria[key] = req._resourceId;
                                 var query = otherSide.initQuery(otherSide.getModel().find(criteria),req);
-                                query.count(function(err,n){
+                                query.countDocuments(function(err,n){
                                     if(err) {
                                         return Resource.sendError(res,500,'error resolving relationship',err)
                                     }

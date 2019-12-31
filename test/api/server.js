@@ -6,7 +6,7 @@ var express = require('express'),
 
 console.log(config);
 
-mongoose.connect(config.mongodb,function(err){
+mongoose.connect(config.mongodb,{ useNewUrlParser: true, useUnifiedTopology: true },function(err){
     if(err){
         return console.error(err);
     }

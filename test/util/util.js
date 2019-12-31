@@ -12,7 +12,7 @@ var util = {
         var keys = Object.keys(mongoose.connection.collections);
         function _next() {
             if(keys.length) {
-                mongoose.connection.collections[keys.pop()].remove(_next);
+                mongoose.connection.collections[keys.pop()].deleteMany({},_next);
             } else {
                 done();
             }
@@ -20,7 +20,7 @@ var util = {
         _next();
     },
     before: function(done) {
-        mongoose.connect(config.mongodb,function(err){
+        mongoose.connect(config.mongodb,{ useNewUrlParser: true, useUnifiedTopology: true },function(err){
             if(err) {
                 throw err;
             }
