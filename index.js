@@ -1,8 +1,7 @@
 var debug = require('debug')('Resource'),
     express = require('express'),
     filterParser = require('./odata-filter'),
-    querystring = require('querystring'),
-    _ = require('lodash');
+    querystring = require('querystring');
 
 /**
  * <p>Constructs a resource.</p>
@@ -46,7 +45,7 @@ var debug = require('debug')('Resource'),
  */
 var Resource = function(definition) {
     var self = this;
-    this._definition = _.extend({count: false},definition);
+    this._definition = Object.assign({count: false},definition);
     if(this._definition.count) {
         this._definition.staticLinks = {
             'count': function(req,res) { self.count(req,res); }
@@ -143,9 +142,9 @@ Resource.prototype._listResponse = function(linkGenerator,req,res,objs,postMappe
         response._links = response._links||{};
         // looks odd but $top could be part of the service definition so
         // if its there use it but over-ride if supplied by the client.
-        var forwardArgs = _.extend({$top: qDef.$top},req.query),
-            nextArgs = _.extend({},forwardArgs,{$skip:(parseInt(forwardArgs.$skip||0)+parseInt(forwardArgs.$top))})
-            prevArgs = _.extend({},forwardArgs,{$skip:(parseInt(forwardArgs.$skip||0)-parseInt(forwardArgs.$top))}),
+        var forwardArgs = Object.assign({$top: qDef.$top},req.query),
+            nextArgs = Object.assign({},forwardArgs,{$skip:(parseInt(forwardArgs.$skip||0)+parseInt(forwardArgs.$top))})
+            prevArgs = Object.assign({},forwardArgs,{$skip:(parseInt(forwardArgs.$skip||0)-parseInt(forwardArgs.$top))}),
             baseUrl = req.originalUrl.replace(/\?.*$/,'');
         if(prevArgs.$skip >= 0) {
             response._links.prev = baseUrl+'?'+querystring.stringify(prevArgs);
@@ -172,7 +171,7 @@ Resource.prototype._findListResponse = function(req,res,objs,postMapper,next) {
                 return map;
             },{});
             if(def.count && lnks.count) {
-                var q = _.extend({},(req.query||{}));
+                var q = Object.assign({},(req.query||{}));
                 delete q.$top;
                 delete q.$skip;
                 delete q.$orderby;
@@ -230,7 +229,7 @@ Resource.prototype.relListResponse = function(req,res,objs,postMapper,next) {
             },{});
         if(def.count) {
             // replace count
-            var q = _.extend({},(req.query||{}));
+            var q = Object.assign({},(req.query||{}));
             delete q.$top;
             delete q.$skip;
             delete q.$orderby;
@@ -283,12 +282,12 @@ function odataOrderBy($orderby) {
  */
 Resource.prototype.initQuery = function(query,req) {
     var base = this.getDefinition(),
-        def = _.extend({
+        def = Object.assign({
             $orderbyPaged: '_id',
             $expand: base.populate // populate is deprecated, if set its the default for $expand
         },base,req.query),
         populate = def.$expand ?
-            (_.isArray(def.$expand) ? def.$expand : [def.$expand]) : [];
+            (Array.isArray(def.$expand) ? def.$expand : [def.$expand]) : [];
     populate.forEach(function(att){
         if(typeof(att) === 'string') {
             att.split(',').forEach(function(a) {

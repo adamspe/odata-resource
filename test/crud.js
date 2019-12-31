@@ -1,6 +1,5 @@
 var should = require('should'),
     util = require('./util/util'),
-    _ = require('lodash'),
     models = util.models,
     api = util.api;
 
@@ -136,7 +135,7 @@ describe('CRUD',function(){
                     author._id = res.body._id;
                     util.testAuthor(res.body,author);
                     api.put(res.body._links.self)
-                       .send(_.extend({},res.body,{lastname: 'Jones'}))
+                       .send(Object.assign({},res.body,{lastname: 'Jones'}))
                        .expect(200)
                        .expect('Content-Type', /json/)
                        .end(function(err,res){

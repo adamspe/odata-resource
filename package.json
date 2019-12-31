@@ -23,15 +23,14 @@
   },
   "homepage": "https://adamspe.github.io/odata-resource/",
   "dependencies": {
-    "debug": "^2.2.0",
-    "lodash": "^3.10.1"
+    "debug": ">=2.6.9"
   },
   "devDependencies": {
-    "express": "^4.13.3",
-    "body-parser": "^1.14.0",
+    "express": ">=4.17.1",
+    "body-parser": ">=1.19.0",
     "chai": "^3.3.0",
-    "mongoose": "4.5.x",
+    "mongoose": ">=5.7.5",
     "should": "^7.1.0",
-    "supertest": "^1.1.0"
+    "supertest": ">=3.7.0"
   }
 }
